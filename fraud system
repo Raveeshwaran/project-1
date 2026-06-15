@@ -1,0 +1,68 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import pywhatkit   # used only for fraud alerts
+
+def add_transaction(account, amount, location, time, t_type):
+    with open("transactions.csv", "a") as f:
+        f.write(f"{account},{amount},{location},{time},{t_type}\n")
+
+def load_data():
+    cols = ["Account","Amount","Location","Time","Type"]
+    df = pd.read_csv("transactions.csv", names=cols)
+    return df
+
+def detect_fraud():
+    df = load_data()
+
+    # Safely convert Time column to datetime
+    df["Time"] = pd.to_datetime(df["Time"], errors="coerce", format="%Y-%m-%d %H:%M")
+
+    # Fraud rules
+    df["HighValue"] = df["Amount"] > 100000
+    df["Foreign"] = df["Location"] != "India"
+    df["OddHour"] = df["Time"].dt.hour.isin([0,1,2,3,4])
+    df["Fraud"] = df["HighValue"] & df["Foreign"] | df["OddHour"]
+
+    # Collect fraud cases
+    fraud_cases = df[df["Fraud"] == True]
+    fraud_cases.to_csv("fraud_report.csv", index=False)
+    print("\n Fraud report generated!\n")
+    print(fraud_cases)
+
+    # Show chart if fraud exists
+    if not fraud_cases.empty:
+        print("\n Fraud by Location:")
+        fraud_cases["Location"].value_counts().plot(kind="bar", color="red")
+        plt.xlabel("Location")
+        plt.ylabel("Fraud Cases")
+        plt.title("Fraud Cases by Location")
+        plt.show()
+
+        
+        pywhatkit.sendwhatmsg_instantly("+919994276406", "️ Fraud detected! Check fraud_report.csv")
+
+def menu():
+    while True:
+        print("\n--- Banking Fraud Detection ---")
+        print("1. Add Transaction")
+        print("2. Analyze Fraud")
+        print("3. Exit")
+        choice = input("Enter choice: ")
+
+        if choice == "1":
+            acc = input("Account: ")
+            amt = int(input("Amount: "))
+            loc = input("Location: ")
+            time = input("Time (YYYY-MM-DD HH:MM): ")
+            t_type = input("Type: ")
+            add_transaction(acc, amt, loc, time, t_type)
+            print(" Transaction added.")
+        elif choice == "2":
+            detect_fraud()
+        elif choice == "3":
+            print("Exiting system. Goodbye!")
+            break
+        else:
+            print(" Invalid choice. Try again.")
+
+menu()
