@@ -1,0 +1,36 @@
+import random
+
+tr = input("Type a number: ")
+
+if tr.isdigit():
+    tr = int(tr)
+    
+
+    if tr <= 0:
+        print('please type a large number greter than 0 please')
+        quit()
+else:
+    print('Please type a number next time.')
+    quit()
+
+rn = random.randint(0,tr)
+g = 0
+
+while True:
+    g += 1
+    ug = input("Make a guess: ")
+    if ug.isdigit():
+        ug = int(ug)
+    else:
+        print('please type a number next time.')
+        continue
+
+    if ug == rn:
+        print("You crack it u can do it")
+        break
+    elif ug > rn :
+        print("You were above the number!")
+    else:
+        print("You were below the number!")
+
+print("You got it in", g, "g")
