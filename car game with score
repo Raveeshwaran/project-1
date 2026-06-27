@@ -1,0 +1,204 @@
+import pygame
+import os
+import sys
+import random
+import math
+
+pygame.init()
+
+# Screen Setup
+screen_width = 800
+screen_height = 600
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption("Nitro Rush: 2D Arcade Racing")
+clock = pygame.time.Clock()
+
+# Path configuration
+current_folder = os.path.dirname(os.path.abspath(__file__))
+
+try:
+    image_path = os.path.join(current_folder, "car.png")
+    car_width, car_height = 100, 180
+    player_img = pygame.image.load(image_path).convert_alpha()
+    player_img = pygame.transform.scale(player_img, (car_width, car_height))
+except Exception as e:
+    print(f"Error loading car asset: {e}")
+    pygame.quit()
+    sys.exit()
+
+# Environment Track Config
+road_width = 440
+road_x = (screen_width - road_width) // 2
+
+# Game Object States
+player_x = (screen_width // 2) - (car_width // 2)
+player_y = screen_height - car_height - 30
+player_speed = 9
+
+enemy_width = 90
+enemy_height = 160
+enemy_x = random.randint(road_x + 20, road_x + road_width - enemy_width - 20)
+enemy_y = -enemy_height
+base_enemy_speed = 7
+
+# Visual effects tracking variables
+road_stripe_y = 0
+particles = []  # Exhaust smoke particle system container
+score = 0
+high_score = 0
+
+# Game System Fonts
+font = pygame.font.SysFont("Impact", 32)
+ui_font = pygame.font.SysFont("Impact", 24)
+title_font = pygame.font.SysFont("Impact", 72)
+
+def draw_environment(stripe_offset, current_score):
+    # 1. Base Scrolling Grass Environment (Alternating grid lines for movement speed)
+    screen.fill((34, 139, 34))
+    for y_pos in range(int(stripe_offset) % 80 - 80, screen_height, 80):
+        pygame.draw.rect(screen, (40, 155, 40), (0, y_pos, road_x, 40))
+        pygame.draw.rect(screen, (40, 155, 40), (road_x + road_width, y_pos, road_x, 40))
+
+    # 2. Main Asphalt Highway
+    pygame.draw.rect(screen, (50, 50, 50), (road_x, 0, road_width, screen_height))
+    
+    # Red & White Rumble Strips on road shoulders
+    for y_pos in range(int(stripe_offset) % 60 - 60, screen_height, 60):
+        stripe_color = (255, 255, 255) if (y_pos // 60) % 2 == 0 else (220, 50, 50)
+        pygame.draw.rect(screen, stripe_color, (road_x - 15, y_pos, 15, 30))
+        pygame.draw.rect(screen, stripe_color, (road_x + road_width, y_pos, 15, 30))
+
+    # 3. Center Dashed Lane Divider (Creates the high-speed scrolling illusion)
+    center_line_x = road_x + (road_width // 2) - 5
+    for y_pos in range(int(stripe_offset) % 100 - 100, screen_height, 100):
+        pygame.draw.rect(screen, (240, 240, 100), (center_line_x, y_pos, 10, 50))
+
+def handle_particles(px, py, pw, ph):
+    # Spawns cloud puffs behind the wheels/exhaust area
+    if random.random() < 0.4:
+        particles.append({
+            "x": px + pw // 2 + random.randint(-15, 15),
+            "y": py + ph - 10,
+            "radius": random.randint(5, 12),
+            "alpha": 200,
+            "speed_y": random.uniform(2, 5)
+        })
+    
+    # Process, draw and decay active smoke clouds
+    for p in particles[:]:
+        p["y"] += p["speed_y"]
+        p["alpha"] -= 6
+        p["radius"] += 0.2
+        if p["alpha"] <= 0:
+            particles.remove(p)
+        else:
+            # Render transparency using a temporary surface layer
+            surf = pygame.Surface((int(p["radius"]*2), int(p["radius"]*2)), pygame.SRCALPHA)
+            pygame.draw.circle(surf, (200, 200, 200, int(p['alpha'])), (int(p["radius"]), int(p["radius"])), int(p["radius"]))
+            screen.blit(surf, (int(p["x"] - p["radius"]), int(p["y"] - p["radius"])))
+
+def check_collision(px, py, pw, ph, ex, ey, ew, eh):
+    # Padding slightly shrinks bounding boxes to make collision feel fair to the player
+    padding = 8
+    return (px + padding < ex + ew - padding and 
+            px + pw - padding > ex + padding and 
+            py + padding < ey + eh - padding and 
+            py + ph - padding > ey + padding)
+
+# State Engines
+running = True
+game_over = False
+current_enemy_color = (235, 60, 60)
+
+while running:
+    # Scale total dynamic environment velocity relative to current game score
+    current_velocity = base_enemy_speed + (score * 0.4)
+    
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        if event.type == pygame.KEYDOWN and game_over:
+            if event.key == pygame.K_SPACE:
+                player_x = (screen_width // 2) - (car_width // 2)
+                enemy_y = -enemy_height
+                enemy_x = random.randint(road_x + 20, road_x + road_width - enemy_width - 20)
+                score = 0
+                particles.clear()
+                game_over = False
+
+    if not game_over:
+        # Player Input Controls
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            player_x -= player_speed
+        if keys[pygame.K_RIGHT]:
+            player_x += player_speed
+
+        # Safe Boundary Wall Clamps
+        if player_x < road_x + 15:
+            player_x = road_x + 15
+        if player_x > (road_x + road_width - car_width - 15):
+            player_x = road_x + road_width - car_width - 15
+
+        # Move environment layer offset ticker
+        road_stripe_y += current_velocity
+        enemy_y += current_velocity
+
+        # Reset traffic obstacles clearing off screen bounds
+        if enemy_y > screen_height:
+            enemy_y = -enemy_height
+            enemy_x = random.randint(road_x + 20, road_x + road_width - enemy_width - 20)
+            score += 1
+            if score > high_score:
+                high_score = score
+            # Shift colors randomly for incoming new cars
+            current_enemy_color = random.choice([
+                (230, 40, 40),   # Crimson Flame Red
+                (30, 144, 255),  # Electric Blue
+                (255, 140, 0),   # Neon Orange
+                (148, 0, 211)    # Purple Shadow
+            ])
+
+        if check_collision(player_x, player_y, car_width, car_height, enemy_x, enemy_y, enemy_width, enemy_height):
+            game_over = True
+
+    # Render Graphics Scene Pipeline
+    draw_environment(road_stripe_y, score)
+    handle_particles(player_x, player_y, car_width, car_height)
+
+    if not game_over:
+        # Draw Enemy Traffic Box with shaded structural framing roof accent
+        pygame.draw.rect(screen, current_enemy_color, (enemy_x, enemy_y, enemy_width, enemy_height), border_radius=6)
+        pygame.draw.rect(screen, (40, 40, 40), (enemy_x + 10, enemy_y + 25, enemy_width - 20, 45), border_radius=4) # Windshield frame
+        
+        # Blit Player Vehicle Sprite
+        screen.blit(player_img, (player_x, player_y))
+        
+        # Clean HUD UI Overlays
+        score_surface = font.render(f"SCORE: {score:02d}", True, (255, 255, 255))
+        hi_score_surface = ui_font.render(f"BEST: {high_score:02d}", True, (255, 215, 0))
+        speed_surface = ui_font.render(f"SPEED: {int(current_velocity * 10)} MPH", True, (0, 255, 255))
+        
+        screen.blit(score_surface, (20, 20))
+        screen.blit(hi_score_surface, (20, 60))
+        screen.blit(speed_surface, (screen_width - 180, 20))
+    else:
+        # Stylized Game Over Dashboard Module Screen Overlay
+        overlay = pygame.Surface((screen_width, screen_height), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 180)) # Translucent darkened background backdrop
+        screen.blit(overlay, (0, 0))
+        
+        text_title = title_font.render("CRASHED!", True, (255, 30, 30))
+        text_score = font.render(f"Final Score: {score}", True, (255, 255, 255))
+        text_best = ui_font.render(f"Session High Score: {high_score}", True, (255, 215, 0))
+        text_hint = font.render("PRESS SPACEBAR TO RESTART", True, (0, 255, 100))
+        
+        screen.blit(text_title, (screen_width // 2 - text_title.get_width() // 2, screen_height // 2 - 120))
+        screen.blit(text_score, (screen_width // 2 - text_score.get_width() // 2, screen_height // 2 - 20))
+        screen.blit(text_best, (screen_width // 2 - text_best.get_width() // 2, screen_height // 2 + 20))
+        screen.blit(text_hint, (screen_width // 2 - text_hint.get_width() // 2, screen_height // 2 + 90))
+
+    pygame.display.update()
+    clock.tick(60)
+
+pygame.quit()
