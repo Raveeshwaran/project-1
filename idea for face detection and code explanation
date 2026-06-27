@@ -1,0 +1,112 @@
+Complete Beginner Guide: Face Detection and
+Face Matching System Using Python and OpenCV
+1. Introduction
+This project detects faces from a webcam, stores face images, trains a face recognition model, and
+later checks whether a live face matches the saved face. This guide is written for complete
+beginners.
+2. What is Face Detection?
+Face detection means finding the location of a human face inside an image or video. In this project,
+Haar Cascade Classifier is used to locate faces.
+3. What is Face Recognition?
+Face recognition means identifying or verifying a person by comparing facial features with
+previously stored data.
+4. Software Requirements
+Python 3.x, OpenCV, OpenCV-Contrib, Webcam, Command Prompt, Text Editor or IDLE.
+5. Installation
+pip install opencv-python
+pip install opencv-contrib-python
+6. What is OpenCV (cv2)?
+OpenCV is an open-source computer vision library. It provides functions for image processing,
+webcam access, object detection, face detection, drawing shapes, and machine learning tasks.
+7. What is Haar Cascade?
+Haar Cascade is a pre-trained face detection algorithm. It scans images and finds face-like
+patterns.
+8. What is LBPH?
+LBPH stands for Local Binary Pattern Histogram. It converts facial textures into mathematical
+patterns and uses them for recognition.
+9. Project Workflow
+Step 1: Detect Face.
+Step 2: Save 30 Face Images.
+Step 3: Train Model.
+Step 4: Create trainer.yml.
+Step 5: Compare Live Face.
+Step 6: Display FACE MATCHED or FACE NOT MATCHED.
+10. save_face.py Full Explanation
+import cv2 -> Imports OpenCV.
+import os -> Imports operating system functions.
+CascadeClassifier -> Loads face detector.
+VideoCapture(0) -> Opens webcam.
+os.path.exists() -> Checks folder existence.
+os.makedirs() -> Creates folder.
+cap.read() -> Captures frame.
+cvtColor() -> Converts image to grayscale.
+detectMultiScale() -> Detects faces.
+for(x,y,w,h) -> Loops through faces.
+gray[y:y+h,x:x+w] -> Crops face.
+imwrite() -> Saves image.
+rectangle() -> Draws box.
+imshow() -> Shows window.
+waitKey() -> Waits for key press.
+release() -> Releases webcam.
+destroyAllWindows() -> Closes windows.
+11. train_face.py Full Explanation
+faces=[] -> Stores training images.
+ids=[] -> Stores labels.
+os.listdir() -> Reads files.
+imread() -> Loads image.
+append() -> Adds image to list.
+LBPHFaceRecognizer_create() -> Creates recognizer.
+train() -> Learns facial features.
+save('trainer.yml') -> Saves trained model.
+12. check_face.py Full Explanation
+read('trainer.yml') -> Loads trained model.
+predict(face) -> Compares face with trained data.
+label -> Predicted user ID.
+confidence -> Similarity score.
+confidence < 60 -> Face matched.
+confidence >= 60 -> Face not matched.
+putText() -> Displays result.
+imshow() -> Shows live recognition.
+13. What is trainer.yml?
+trainer.yml is the trained recognition model. It stores facial patterns learned from the training
+images. During recognition, this file is loaded and used to compare faces.
+14. Folder Structure
+Project Folder
+|-- save_face.py
+|-- train_face.py
+|-- check_face.py
+|-- trainer.yml
+|-- faces/
+|-- user_1.jpg
+|-- user_2.jpg
+|-- ...
+15. Confidence Value
+Confidence indicates similarity. Lower values mean a better match. In this project, confidence
+below 60 is considered a match.
+16. Advantages
+Real-time recognition, simple implementation, low hardware requirements, useful for attendance
+and authentication systems.
+17. Limitations
+Lighting conditions can affect accuracy. Extreme face angles may reduce recognition performance.
+18. Applications
+Attendance systems, office access systems, classroom projects, basic security systems, visitor
+identification.
+19. Frequently Asked Viva Questions
+Q: What is OpenCV?
+A: Open-source computer vision library.
+Q: Why use grayscale images?
+A: Faster processing and less computation.
+Q: What is Haar Cascade?
+A: Face detection algorithm.
+Q: What is LBPH?
+A: Face recognition algorithm.
+Q: Why save 30 images?
+A: Improves recognition accuracy.
+Q: What is trainer.yml?
+A: Trained face recognition model.
+Q: Difference between face detection and face recognition?
+A: Detection finds faces; recognition identifies them.
+20. Conclusion
+This project demonstrates a complete face detection and face matching system using OpenCV.
+Faces are detected, stored, trained using LBPH, and compared against live webcam input to
+determine whether the person matches the registered user.
