@@ -1,0 +1,96 @@
+import pygame
+import random
+import sys
+
+pygame.init()
+WIDTH, HEIGHT = 900, 600
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("Shoot the Fruit")
+
+clock = pygame.time.Clock()
+font = pygame.font.SysFont("comicsans", 40)
+
+WHITE = (255, 255, 255)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+ORANGE = (255, 165, 0)
+YELLOW = (255, 255, 0)
+PURPLE = (160, 32, 240)
+
+player = pygame.Rect(WIDTH//2 - 40, HEIGHT - 80, 80, 60)
+bullets = []
+fruits = []
+score = 0
+level = 1
+
+fruit_colors = [ORANGE, YELLOW, RED, PURPLE, GREEN]
+
+def spawn_fruit():
+    color = random.choice(fruit_colors)
+    x = random.randint(50, WIDTH - 50)
+    y = -40
+    speed = random.randint(3, 6 + level)
+    fruits.append({"rect": pygame.Rect(x, y, 40, 40), "color": color, "speed": speed})
+
+def draw_background():
+    for i in range(HEIGHT):
+        color = (i//3, 0, 100 + i//6)  # gradient purple-blue
+        pygame.draw.line(screen, color, (0, i), (WIDTH, i))
+    for i in range(0, WIDTH, 50):
+        pygame.draw.line(screen, (50, 50, 50), (i, 0), (i, HEIGHT))
+    for i in range(0, HEIGHT, 50):
+        pygame.draw.line(screen, (50, 50, 50), (0, i), (WIDTH, i))
+
+running = True
+while running:
+    draw_background()
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_LEFT] and player.left > 0:
+        player.move_ip(-7, 0)
+    if keys[pygame.K_RIGHT] and player.right < WIDTH:
+        player.move_ip(7, 0)
+    if keys[pygame.K_SPACE]:
+        if len(bullets) < 5:
+            bullets.append(pygame.Rect(player.centerx - 5, player.top - 20, 10, 20))
+
+    for bullet in bullets[:]:
+        bullet.move_ip(0, -10)
+        if bullet.bottom < 0:
+            bullets.remove(bullet)
+
+    if random.randint(1, 30) == 1:
+        spawn_fruit()
+
+    for fruit in fruits[:]:
+        fruit["rect"].move_ip(0, fruit["speed"])
+        if fruit["rect"].top > HEIGHT:
+            fruits.remove(fruit)
+
+    for bullet in bullets[:]:
+        for fruit in fruits[:]:
+            if bullet.colliderect(fruit["rect"]):
+                bullets.remove(bullet)
+                fruits.remove(fruit)
+                score += 1
+                if score % 10 == 0:
+                    level += 1
+                break
+
+    pygame.draw.rect(screen, GREEN, player)
+    for bullet in bullets:
+        pygame.draw.rect(screen, RED, bullet)
+    for fruit in fruits:
+        pygame.draw.circle(screen, fruit["color"], fruit["rect"].center, 20)
+
+    score_text = font.render(f"Score: {score}  Level: {level}", True, WHITE)
+    screen.blit(score_text, (20, 20))
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
+sys.exit()
+
