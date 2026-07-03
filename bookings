@@ -1,0 +1,1331 @@
+import customtkinter as ctk
+from tkinter import ttk, messagebox, filedialog
+import tkinter as tk
+import sqlite3
+import base64
+import hashlib
+import secrets
+import csv
+import logging
+import re
+from datetime import datetime, date
+from typing import Optional, Any
+
+DB_NAME = "bookings.db"
+
+logging.basicConfig(
+    filename="app.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+ctk.set_appearance_mode("System")
+ctk.set_default_color_theme("blue")
+
+# Location database with hotels and attractions
+# Covers all 28 Indian states + 8 union territories
+LOCATIONS_DATA = {
+    # ---------------- STATES ----------------
+    "andhra pradesh": {
+        "display_name": "Andhra Pradesh (Vijayawada)",
+        "hotels": [
+            "Gateway Hotel Vijayawada",
+            "Novotel Vijayawada Varun",
+            "Fortune Murali Park",
+            "Ramada Vijayawada",
+            "Minerva Grand"
+        ],
+        "attractions": [
+            "Kanaka Durga Temple",
+            "Undavalli Caves",
+            "Bhavani Island",
+            "Prakasam Barrage",
+            "Kondapalli Fort"
+        ]
+    },
+    "arunachal pradesh": {
+        "display_name": "Arunachal Pradesh (Itanagar)",
+        "hotels": [
+            "Hotel Donyi Polo Ashok",
+            "Hotel Arun Subansiri",
+            "Hotel Blue Pine",
+            "The Yorkin Hotel",
+            "Hotel Cinderella"
+        ],
+        "attractions": [
+            "Tawang Monastery",
+            "Ita Fort",
+            "Sela Pass",
+            "Ziro Valley",
+            "Namdapha National Park"
+        ]
+    },
+    "assam": {
+        "display_name": "Assam (Guwahati)",
+        "hotels": [
+            "Vivanta Guwahati",
+            "Radisson Blu Guwahati",
+            "The Kiranshree Grande",
+            "Hotel Dynasty",
+            "Ginger Guwahati"
+        ],
+        "attractions": [
+            "Kamakhya Temple",
+            "Kaziranga National Park",
+            "Umananda Island",
+            "Assam State Museum",
+            "Brahmaputra River Cruise"
+        ]
+    },
+    "bihar": {
+        "display_name": "Bihar (Patna)",
+        "hotels": [
+            "Maurya Patna",
+            "Chanakya Hotel",
+            "Lemon Tree Patna",
+            "Hotel Panache",
+            "Patliputra Continental"
+        ],
+        "attractions": [
+            "Mahabodhi Temple, Bodh Gaya",
+            "Golghar",
+            "Patna Sahib Gurudwara",
+            "Nalanda Ruins",
+            "Rajgir Hills"
+        ]
+    },
+    "chhattisgarh": {
+        "display_name": "Chhattisgarh (Raipur)",
+        "hotels": [
+            "Radisson Blu Raipur",
+            "Hotel Celebration",
+            "Babylon International",
+            "The Regenta Central",
+            "Hotel Piccadily"
+        ],
+        "attractions": [
+            "Chitrakote Falls",
+            "Sirpur Archaeological Site",
+            "Mahant Ghasidas Museum",
+            "Barnawapara Wildlife Sanctuary",
+            "Bhoramdeo Temple"
+        ]
+    },
+    "goa": {
+        "display_name": "Goa",
+        "hotels": [
+            "Taj Exotica Goa",
+            "Park Hyatt Goa",
+            "Radisson Blu Resort",
+            "Leela Goa",
+            "Grand Hyatt Goa"
+        ],
+        "attractions": [
+            "Basilica of Bom Jesus",
+            "Aguada Fort",
+            "Dudhsagar Waterfall",
+            "Calangute Beach",
+            "Wonderla Amusement Park Goa"
+        ]
+    },
+    "gujarat": {
+        "display_name": "Gujarat (Ahmedabad)",
+        "hotels": [
+            "Hyatt Regency Ahmedabad",
+            "Courtyard by Marriott Ahmedabad",
+            "The House of MG",
+            "Novotel Ahmedabad",
+            "Crowne Plaza Ahmedabad"
+        ],
+        "attractions": [
+            "Sabarmati Ashram",
+            "Statue of Unity",
+            "Rani ki Vav",
+            "Kankaria Lake",
+            "Adalaj Stepwell"
+        ]
+    },
+    "haryana": {
+        "display_name": "Haryana (Gurugram)",
+        "hotels": [
+            "Leela Ambience Gurugram",
+            "The Oberoi Gurgaon",
+            "Trident Gurgaon",
+            "ITC Grand Bharat",
+            "Hyatt Regency Gurgaon"
+        ],
+        "attractions": [
+            "Kingdom of Dreams",
+            "Sultanpur National Park",
+            "Sheetla Mata Mandir",
+            "Damdama Lake",
+            "Cyber Hub"
+        ]
+    },
+    "himachal pradesh": {
+        "display_name": "Himachal Pradesh (Shimla)",
+        "hotels": [
+            "The Oberoi Cecil",
+            "Wildflower Hall",
+            "Radisson Hotel Shimla",
+            "Clarkes Hotel",
+            "Hotel Willow Banks"
+        ],
+        "attractions": [
+            "The Ridge",
+            "Mall Road",
+            "Jakhoo Temple",
+            "Kufri",
+            "Christ Church"
+        ]
+    },
+    "jharkhand": {
+        "display_name": "Jharkhand (Ranchi)",
+        "hotels": [
+            "Radisson Blu Ranchi",
+            "Capitol Hill Hotel",
+            "Hotel BNR Chanakya",
+            "Ranchi Regency",
+            "The Sarovar Portico"
+        ],
+        "attractions": [
+            "Hundru Falls",
+            "Jagannath Temple Ranchi",
+            "Rock Garden",
+            "Patratu Valley",
+            "Dassam Falls"
+        ]
+    },
+    "karnataka": {
+        "display_name": "Karnataka (Bangalore)",
+        "hotels": [
+            "The Leela Palace",
+            "ITC Gardenia",
+            "Radisson Blu",
+            "Marriott Bangalore",
+            "Hilton Garden Inn"
+        ],
+        "attractions": [
+            "Lalbagh Botanical Garden",
+            "Vidhana Soudha",
+            "Tipu Sultan's Summer Palace",
+            "Cubbon Park",
+            "Wonderla Amusement Park"
+        ]
+    },
+    "kerala": {
+        "display_name": "Kerala (Kochi)",
+        "hotels": [
+            "Taj Malabar Resort Kochi",
+            "Grand Hyatt Kochi Bolgatty",
+            "Le Meridien Kochi",
+            "Crowne Plaza Kochi",
+            "Vivanta Ernakulam"
+        ],
+        "attractions": [
+            "Fort Kochi Beach",
+            "Chinese Fishing Nets",
+            "Mattancherry Palace",
+            "Alleppey Backwaters",
+            "Munnar Tea Gardens"
+        ]
+    },
+    "madhya pradesh": {
+        "display_name": "Madhya Pradesh (Bhopal)",
+        "hotels": [
+            "Jehan Numa Palace",
+            "Courtyard by Marriott Bhopal",
+            "Noor-Us-Sabah Palace",
+            "Hotel Sagar Plaza",
+            "Amer Palace"
+        ],
+        "attractions": [
+            "Upper Lake (Bhoj Wetland)",
+            "Sanchi Stupa",
+            "Bhimbetka Rock Shelters",
+            "Van Vihar National Park",
+            "Taj-ul-Masajid"
+        ]
+    },
+    "maharashtra": {
+        "display_name": "Maharashtra (Mumbai)",
+        "hotels": [
+            "Taj Hotel Mumbai",
+            "Oberoi Mumbai",
+            "ITC Maratha",
+            "Hilton Mumbai",
+            "JW Marriott Mumbai"
+        ],
+        "attractions": [
+            "Gateway of India",
+            "Marine Drive",
+            "Colaba Causeway",
+            "Bandra-Worli Sea Link",
+            "EsselWorld Theme Park"
+        ]
+    },
+    "manipur": {
+        "display_name": "Manipur (Imphal)",
+        "hotels": [
+            "Classic Hotel Imphal",
+            "Hotel Imphal",
+            "Hotel Nirmala",
+            "The Classic Grande",
+            "Hotel Anand Continental"
+        ],
+        "attractions": [
+            "Loktak Lake",
+            "Kangla Fort",
+            "Shree Govindajee Temple",
+            "Keibul Lamjao National Park",
+            "Manipur State Museum"
+        ]
+    },
+    "meghalaya": {
+        "display_name": "Meghalaya (Shillong)",
+        "hotels": [
+            "Ri Kynjai Resort",
+            "Hotel Polo Towers",
+            "Pinewood Hotel",
+            "Hotel Centre Point",
+            "Eee Cee Hotel"
+        ],
+        "attractions": [
+            "Living Root Bridges",
+            "Elephant Falls",
+            "Umiam Lake",
+            "Shillong Peak",
+            "Mawlynnong Village"
+        ]
+    },
+    "mizoram": {
+        "display_name": "Mizoram (Aizawl)",
+        "hotels": [
+            "Hotel Regency",
+            "David's Kut Resort",
+            "Hotel Chief",
+            "Hotel Floria",
+            "Hotel Tropicana"
+        ],
+        "attractions": [
+            "Solomon's Temple",
+            "Reiek Tlang",
+            "Durtlang Hills",
+            "Vantawng Falls",
+            "Mizoram State Museum"
+        ]
+    },
+    "nagaland": {
+        "display_name": "Nagaland (Kohima)",
+        "hotels": [
+            "Hotel Japfu",
+            "Razhu Pru Heritage Hotel",
+            "Hotel De Oriental Grace",
+            "Hotel Saramati",
+            "Niathu Resort"
+        ],
+        "attractions": [
+            "Kohima War Cemetery",
+            "Naga Heritage Village Kisama",
+            "Dzukou Valley",
+            "Japfu Peak",
+            "State Museum Kohima"
+        ]
+    },
+    "odisha": {
+        "display_name": "Odisha (Bhubaneswar)",
+        "hotels": [
+            "Mayfair Lagoon",
+            "Trident Bhubaneswar",
+            "Swosti Premium",
+            "Ginger Bhubaneswar",
+            "Hotel New Marrion"
+        ],
+        "attractions": [
+            "Lingaraj Temple",
+            "Konark Sun Temple",
+            "Puri Jagannath Temple",
+            "Udayagiri and Khandagiri Caves",
+            "Chilika Lake"
+        ]
+    },
+    "punjab": {
+        "display_name": "Punjab (Amritsar)",
+        "hotels": [
+            "Taj Swarna Amritsar",
+            "Hyatt Regency Amritsar",
+            "Radisson Blu Amritsar",
+            "Ranjit's Svaasa",
+            "Holiday Inn Amritsar"
+        ],
+        "attractions": [
+            "Golden Temple",
+            "Wagah Border",
+            "Jallianwala Bagh",
+            "Gobindgarh Fort",
+            "Partition Museum"
+        ]
+    },
+    "rajasthan": {
+        "display_name": "Rajasthan (Jaipur)",
+        "hotels": [
+            "The Leela Palace Jaipur",
+            "Oberoi Rajvilas",
+            "Taj Hotels Jaipur",
+            "ITC Rajputana",
+            "Rambagh Palace"
+        ],
+        "attractions": [
+            "City Palace",
+            "Hawa Mahal",
+            "Jantar Mantar",
+            "Albert Hall Museum",
+            "Chokhi Dhani Theme Park"
+        ]
+    },
+    "sikkim": {
+        "display_name": "Sikkim (Gangtok)",
+        "hotels": [
+            "Mayfair Spa Resort Gangtok",
+            "The Elgin Nor-Khill",
+            "Summit Denzong Resort",
+            "Hotel Sonam Delek",
+            "Netuk House"
+        ],
+        "attractions": [
+            "MG Marg",
+            "Tsomgo Lake",
+            "Rumtek Monastery",
+            "Nathula Pass",
+            "Namgyal Institute of Tibetology"
+        ]
+    },
+    "tamil nadu": {
+        "display_name": "Tamil Nadu (Salem)",
+        "hotels": [
+            "Grand Palais Hotel",
+            "Hotel Savera",
+            "Tamilnadu Heritage Hotel",
+            "South Park Hotel",
+            "Taj Garden Retreat"
+        ],
+        "attractions": [
+            "Kapaleeshwarar Temple",
+            "Government Museum",
+            "Pazhaiyarai Palace",
+            "Subramaniya Swamy Temple",
+            "Fort St. George"
+        ]
+    },
+    "telangana": {
+        "display_name": "Telangana (Hyderabad)",
+        "hotels": [
+            "Taj Falaknuma Palace",
+            "ITC Kohenur",
+            "Park Hyatt Hyderabad",
+            "Novotel Hyderabad Convention Centre",
+            "Trident Hyderabad"
+        ],
+        "attractions": [
+            "Charminar",
+            "Golconda Fort",
+            "Hussain Sagar Lake",
+            "Ramoji Film City",
+            "Chowmahalla Palace"
+        ]
+    },
+    "tripura": {
+        "display_name": "Tripura (Agartala)",
+        "hotels": [
+            "Hotel Sonar Tori",
+            "Ginger Agartala",
+            "Hotel Welcome Palace",
+            "Polo Towers Agartala",
+            "Hotel Meghna Classic"
+        ],
+        "attractions": [
+            "Ujjayanta Palace",
+            "Neermahal Palace",
+            "Tripura Sundari Temple",
+            "Sepahijala Wildlife Sanctuary",
+            "Unakoti Rock Carvings"
+        ]
+    },
+    "uttar pradesh": {
+        "display_name": "Uttar Pradesh (Lucknow)",
+        "hotels": [
+            "Taj Mahal Lucknow",
+            "Hyatt Regency Lucknow",
+            "Renaissance Lucknow",
+            "Fairfield by Marriott Lucknow",
+            "Vivanta Lucknow"
+        ],
+        "attractions": [
+            "Bara Imambara",
+            "Taj Mahal, Agra",
+            "Chota Imambara",
+            "Rumi Darwaza",
+            "Ambedkar Memorial Park"
+        ]
+    },
+    "uttarakhand": {
+        "display_name": "Uttarakhand (Dehradun)",
+        "hotels": [
+            "Fairmont Jaipur - Uttarakhand Wing",
+            "Ramada Dehradun",
+            "The Fern Ridgewood Resort",
+            "Madhuban Hotel",
+            "Hotel Ashiana Continental"
+        ],
+        "attractions": [
+            "Robber's Cave",
+            "Sahastradhara",
+            "Rajaji National Park",
+            "Mussoorie Mall Road",
+            "Haridwar Har Ki Pauri"
+        ]
+    },
+    "west bengal": {
+        "display_name": "West Bengal (Kolkata)",
+        "hotels": [
+            "The Oberoi Grand Kolkata",
+            "Taj Bengal",
+            "ITC Royal Bengal",
+            "The Park Kolkata",
+            "Hyatt Regency Kolkata"
+        ],
+        "attractions": [
+            "Victoria Memorial",
+            "Howrah Bridge",
+            "Dakshineswar Kali Temple",
+            "Indian Museum",
+            "Eden Gardens"
+        ]
+    },
+
+    # ---------------- UNION TERRITORIES ----------------
+    "andaman and nicobar islands": {
+        "display_name": "Andaman and Nicobar Islands (Port Blair)",
+        "hotels": [
+            "Taj Exotica Andamans",
+            "SeaShell Port Blair",
+            "Fortune Resort Bay Island",
+            "Sinclairs Bayview",
+            "Peerless Sarovar Portico"
+        ],
+        "attractions": [
+            "Cellular Jail",
+            "Radhanagar Beach",
+            "Ross Island",
+            "Havelock Island",
+            "Corbyn's Cove Beach"
+        ]
+    },
+    "chandigarh": {
+        "display_name": "Chandigarh",
+        "hotels": [
+            "JW Marriott Chandigarh",
+            "Taj Chandigarh",
+            "Hyatt Regency Chandigarh",
+            "Lalit Chandigarh",
+            "Hotel Mountview"
+        ],
+        "attractions": [
+            "Rock Garden",
+            "Sukhna Lake",
+            "Rose Garden",
+            "Capitol Complex",
+            "Elante Mall"
+        ]
+    },
+    "dadra and nagar haveli and daman and diu": {
+        "display_name": "Dadra and Nagar Haveli and Daman and Diu",
+        "hotels": [
+            "Radisson Blu Resort Daman",
+            "The Resort Silvassa",
+            "Sun City Resort Daman",
+            "Lipsy World Resort",
+            "Diu Nilesh Beach Resort"
+        ],
+        "attractions": [
+            "Diu Fort",
+            "Devka Beach",
+            "Nagoa Beach",
+            "Vanganga Lake Garden",
+            "Silvassa Tribal Museum"
+        ]
+    },
+    "delhi": {
+        "display_name": "Delhi",
+        "hotels": [
+            "The Leela New Delhi",
+            "ITC Maurya",
+            "Hyatt Regency",
+            "Ashok Hotel",
+            "Radisson Blu New Delhi"
+        ],
+        "attractions": [
+            "Red Fort",
+            "India Gate",
+            "Raj Ghat",
+            "Qutub Minar",
+            "Appu Ghar Amusement Park"
+        ]
+    },
+    "jammu and kashmir": {
+        "display_name": "Jammu and Kashmir (Srinagar)",
+        "hotels": [
+            "The Lalit Grand Palace Srinagar",
+            "Vivanta Dal View",
+            "Taj Vivanta Srinagar",
+            "Welcomhotel Srinagar",
+            "Hotel Broadway"
+        ],
+        "attractions": [
+            "Dal Lake",
+            "Mughal Gardens",
+            "Shankaracharya Temple",
+            "Gulmarg",
+            "Pahalgam"
+        ]
+    },
+    "ladakh": {
+        "display_name": "Ladakh (Leh)",
+        "hotels": [
+            "The Grand Dragon Ladakh",
+            "Ladakh Sarai Resort",
+            "Hotel Lasermo",
+            "Zen Ladakh Resort",
+            "The Zambala Resort"
+        ],
+        "attractions": [
+            "Pangong Lake",
+            "Leh Palace",
+            "Nubra Valley",
+            "Magnetic Hill",
+            "Thiksey Monastery"
+        ]
+    },
+    "lakshadweep": {
+        "display_name": "Lakshadweep (Kavaratti)",
+        "hotels": [
+            "Agatti Island Beach Resort",
+            "Bangaram Island Resort",
+            "Lakshadweep Sports Complex Guest House",
+            "Kadmat Beach Resort",
+            "Prathibha Resort"
+        ],
+        "attractions": [
+            "Agatti Island",
+            "Bangaram Atoll",
+            "Kavaratti Marine Aquarium",
+            "Thinnakara Island",
+            "Kadmat Beach"
+        ]
+    },
+    "puducherry": {
+        "display_name": "Puducherry",
+        "hotels": [
+            "Palais de Mahe",
+            "The Promenade",
+            "Le Dupleix",
+            "Hotel Atithi",
+            "La Villa Hotel"
+        ],
+        "attractions": [
+            "Promenade Beach",
+            "Auroville",
+            "Sri Aurobindo Ashram",
+            "French Quarter (White Town)",
+            "Paradise Beach"
+        ]
+    },
+}
+
+
+def get_conn() -> Optional[sqlite3.Connection]:
+    """Return a SQLite connection or None if the connection fails."""
+    try:
+        return sqlite3.connect(DB_NAME)
+    except sqlite3.Error as e:
+        messagebox.showerror("Database Error", str(e))
+        return None
+
+
+def hash_password(password: str, iterations: int = 260000) -> str:
+    """Hash a password using PBKDF2 with a random salt."""
+    salt = secrets.token_hex(16)
+    key = hashlib.pbkdf2_hmac(
+        "sha256",
+        password.encode("utf-8"),
+        salt.encode("utf-8"),
+        iterations
+    )
+    b64 = base64.b64encode(key).decode("ascii")
+    return f"pbkdf2_sha256${iterations}${salt}${b64}"
+
+
+def verify_password(password: str, stored: str) -> bool:
+    """Verify a password against a stored PBKDF2 hash."""
+    try:
+        algo, iterations, salt, b64_hash = stored.split("$", 3)
+        if algo != "pbkdf2_sha256":
+            return False
+        iterations = int(iterations)
+        key = hashlib.pbkdf2_hmac(
+            "sha256",
+            password.encode("utf-8"),
+            salt.encode("utf-8"),
+            iterations
+        )
+        new_b64 = base64.b64encode(key).decode("ascii")
+        return secrets.compare_digest(new_b64, b64_hash)
+    except Exception:
+        return False
+
+
+def validate_password(password: str) -> bool:
+    """Return True if the password meets the strength policy."""
+    if len(password) < 8:
+        return False
+    if not re.search(r"[A-Z]", password):
+        return False
+    if not re.search(r"[a-z]", password):
+        return False
+    if not re.search(r"\d", password):
+        return False
+    if not re.search(r"[^A-Za-z0-9]", password):
+        return False
+    return True
+
+
+def init_db() -> None:
+    """Create tables, indexes, and a default admin user for development."""
+    conn = get_conn()
+    if not conn:
+        return
+    with conn:
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL DEFAULT 'user',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS bookings (
+                booking_id TEXT PRIMARY KEY,
+                customer_name TEXT NOT NULL,
+                phone TEXT NOT NULL,
+                location TEXT NOT NULL,
+                hotel TEXT NOT NULL,
+                service_type TEXT NOT NULL,
+                booking_date TEXT NOT NULL,
+                booking_time TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'Pending'
+                    CHECK (status IN ('Pending', 'Confirmed', 'Cancelled', 'Completed')),
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_booking_date ON bookings(booking_date)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_phone ON bookings(phone)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_customer_name ON bookings(customer_name)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_status ON bookings(status)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_location ON bookings(location)")
+        cur.execute(
+            "INSERT OR IGNORE INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+            ("admin", hash_password("Admin@123"), "admin")
+        )
+    conn.close()
+
+
+def validate_username(username: str) -> bool:
+    """Return True if the username is 3 to 20 characters of letters, numbers, or underscores."""
+    return bool(re.fullmatch(r"[A-Za-z0-9_]{3,20}", username.strip()))
+
+
+def validate_name(name: str) -> bool:
+    """Return True if the name contains letters, spaces, apostrophes, and hyphens."""
+    return bool(re.fullmatch(r"[^\W\d_]+(?:[ '-][^\W\d_]+)*", name.strip(), flags=re.UNICODE))
+
+
+def validate_phone(phone: str) -> bool:
+    """Return True if the phone number is exactly 10 digits."""
+    return bool(re.fullmatch(r"\d{10}", phone.strip()))
+
+
+def validate_date(date_text: str) -> bool:
+    """Return True if the date is valid and not in the past."""
+    try:
+        d = datetime.strptime(date_text, "%Y-%m-%d").date()
+        return d >= date.today()
+    except ValueError:
+        return False
+
+
+def validate_time(time_text: str) -> bool:
+    """Return True if the time is valid in HH:MM format."""
+    try:
+        datetime.strptime(time_text, "%H:%M")
+        return True
+    except ValueError:
+        return False
+
+
+def generate_booking_id() -> Optional[str]:
+    """Generate a daily sequential booking ID."""
+    today = datetime.now().strftime("%Y%m%d")
+    conn = get_conn()
+    if not conn:
+        return None
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT booking_id
+        FROM bookings
+        WHERE booking_id LIKE ?
+        ORDER BY booking_id DESC
+        LIMIT 1
+    """, (f"BK-{today}-%",))
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return f"BK-{today}-0001"
+    last = int(row[0].split("-")[-1])
+    return f"BK-{today}-{last + 1:04d}"
+
+
+def booking_exists(date_text: str, time_text: str, service_type: str, location: str, hotel: str, exclude_booking_id: Optional[str] = None) -> bool:
+    """Return True if an active booking already exists for the slot."""
+    conn = get_conn()
+    if not conn:
+        return False
+    cur = conn.cursor()
+    try:
+        if exclude_booking_id:
+            cur.execute("""
+                SELECT 1 FROM bookings
+                WHERE booking_date=? AND booking_time=? AND service_type=?
+                  AND location=? AND hotel=?
+                  AND status != 'Cancelled'
+                  AND booking_id != ?
+            """, (date_text, time_text, service_type, location, hotel, exclude_booking_id))
+        else:
+            cur.execute("""
+                SELECT 1 FROM bookings
+                WHERE booking_date=? AND booking_time=? AND service_type=?
+                  AND location=? AND hotel=?
+                  AND status != 'Cancelled'
+            """, (date_text, time_text, service_type, location, hotel))
+        return cur.fetchone() is not None
+    finally:
+        conn.close()
+
+
+def create_booking(name: str, phone: str, location: str, hotel: str, service_type: str, date_text: str, time_text: str) -> None:
+    """Insert a new booking into the database with Pending status."""
+    booking_id = generate_booking_id()
+    conn = get_conn()
+    if not conn or not booking_id:
+        return
+    try:
+        with conn:
+            conn.execute("""
+                INSERT INTO bookings
+                (booking_id, customer_name, phone, location, hotel, service_type, booking_date, booking_time, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (booking_id, name, phone, location, hotel, service_type, date_text, time_text, "Pending"))
+        logging.info(f"Booking created: {booking_id}")
+        messagebox.showinfo("Success", f"Booking created: {booking_id}")
+    except sqlite3.IntegrityError as e:
+        logging.error(f"Booking creation failed: {e}")
+        messagebox.showerror("Error", f"Booking creation failed: {e}")
+
+
+def update_booking(booking_id: str, name: str, phone: str, location: str, hotel: str, service_type: str, date_text: str, time_text: str, status: str) -> None:
+    """Update a booking's details."""
+    conn = get_conn()
+    if not conn:
+        return
+    try:
+        with conn:
+            conn.execute("""
+                UPDATE bookings
+                SET customer_name=?, phone=?, location=?, hotel=?, service_type=?, booking_date=?, booking_time=?, status=?, updated_at=?
+                WHERE booking_id=?
+            """, (name, phone, location, hotel, service_type, date_text, time_text, status, datetime.now().isoformat(), booking_id))
+        logging.info(f"Booking updated: {booking_id}")
+        messagebox.showinfo("Success", "Booking updated successfully")
+    except sqlite3.Error as e:
+        logging.error(f"Update failed: {e}")
+        messagebox.showerror("Error", f"Update failed: {e}")
+
+
+def delete_booking(booking_id: str) -> None:
+    """Delete a booking."""
+    conn = get_conn()
+    if not conn:
+        return
+    try:
+        with conn:
+            conn.execute("DELETE FROM bookings WHERE booking_id=?", (booking_id,))
+        logging.info(f"Booking deleted: {booking_id}")
+        messagebox.showinfo("Success", "Booking deleted successfully")
+    except sqlite3.Error as e:
+        logging.error(f"Delete failed: {e}")
+        messagebox.showerror("Error", f"Delete failed: {e}")
+
+
+def fetch_all_bookings() -> list[tuple[Any, ...]]:
+    """Fetch all bookings from the database."""
+    conn = get_conn()
+    if not conn:
+        return []
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT booking_id, customer_name, phone, location, hotel, service_type, booking_date, booking_time, status, created_at, updated_at
+        FROM bookings
+        ORDER BY booking_date DESC, booking_time DESC
+    """)
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def search_bookings(term: str) -> list[tuple[Any, ...]]:
+    """Search bookings by ID, name, phone, location, hotel, service, status, or date."""
+    conn = get_conn()
+    if not conn:
+        return []
+    cur = conn.cursor()
+    search_term = f"%{term}%"
+    cur.execute("""
+        SELECT booking_id, customer_name, phone, location, hotel, service_type, booking_date, booking_time, status, created_at, updated_at
+        FROM bookings
+        WHERE booking_id LIKE ? OR customer_name LIKE ? OR phone LIKE ? 
+              OR location LIKE ? OR hotel LIKE ? OR service_type LIKE ? 
+              OR status LIKE ? OR booking_date LIKE ?
+        ORDER BY booking_date DESC, booking_time DESC
+    """, (search_term, search_term, search_term, search_term, search_term, search_term, search_term, search_term))
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def export_csv(path: str, rows: list[tuple[Any, ...]]) -> None:
+    """Export bookings to a CSV file."""
+    try:
+        with open(path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["ID", "Name", "Phone", "Location", "Hotel", "Service", "Date", "Time", "Status", "Created", "Updated"])
+            writer.writerows(rows)
+        logging.info(f"CSV exported to {path}")
+    except Exception as e:
+        logging.error(f"CSV export failed: {e}")
+        messagebox.showerror("Error", f"CSV export failed: {e}")
+
+
+class App(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.title("Hotel & Travel Booking System")
+        self.geometry("1400x750")
+        self.current_user = None
+        self.selected_booking_id = None
+        self.login_frame()
+
+    def clear(self) -> None:
+        """Clear all widgets from the window."""
+        for widget in self.winfo_children():
+            widget.destroy()
+
+    def is_admin(self) -> bool:
+        """Return True if the current user is an admin."""
+        return self.current_user and self.current_user[1] == "admin"
+
+    def login_frame(self) -> None:
+        """Render the login page."""
+        self.clear()
+        main = ctk.CTkFrame(self)
+        main.pack(fill="both", expand=True)
+
+        frame = ctk.CTkFrame(main)
+        frame.pack(fill="both", expand=True, padx=50, pady=50)
+
+        ctk.CTkLabel(frame, text="Hotel & Travel Booking System", font=ctk.CTkFont(size=28, weight="bold")).pack(pady=20)
+        ctk.CTkLabel(frame, text="Login", font=ctk.CTkFont(size=18, weight="bold")).pack(pady=10)
+
+        self.login_username = ctk.CTkEntry(frame, placeholder_text="Username", width=300)
+        self.login_username.pack(pady=10)
+
+        self.login_password = ctk.CTkEntry(frame, placeholder_text="Password", show="*", width=300)
+        self.login_password.pack(pady=10)
+
+        ctk.CTkButton(frame, text="Login", width=300, command=self.login).pack(pady=15)
+        ctk.CTkLabel(frame, text="Demo: admin / Admin@123", font=ctk.CTkFont(size=10)).pack()
+
+    def login(self) -> None:
+        """Authenticate and proceed to main frame."""
+        username = self.login_username.get().strip()
+        password = self.login_password.get().strip()
+
+        if not username or not password:
+            messagebox.showerror("Error", "Enter username and password")
+            return
+
+        conn = get_conn()
+        if not conn:
+            return
+        cur = conn.cursor()
+        cur.execute("SELECT user_id, role, password_hash FROM users WHERE username=?", (username,))
+        row = cur.fetchone()
+        conn.close()
+
+        if not row or not verify_password(password, row[2]):
+            messagebox.showerror("Error", "Invalid credentials")
+            return
+
+        self.current_user = (username, row[1])
+        self.main_frame()
+
+    def logout(self) -> None:
+        """Logout the current user."""
+        self.current_user = None
+        self.login_frame()
+
+    def main_frame(self) -> None:
+        """Render the main booking dashboard."""
+        self.clear()
+
+        top = ctk.CTkFrame(self)
+        top.pack(fill="x", padx=15, pady=15)
+
+        ctk.CTkLabel(
+            top,
+            text=f"Welcome, {self.current_user[0]} ({self.current_user[1]})",
+            font=ctk.CTkFont(size=20, weight="bold")
+        ).pack(side="left", padx=10)
+
+        ctk.CTkButton(top, text="Logout", command=self.logout).pack(side="right", padx=10)
+
+        body = ctk.CTkFrame(self)
+        body.pack(fill="both", expand=True, padx=15, pady=15)
+
+        left = ctk.CTkFrame(body, width=380)
+        left.pack(side="left", fill="y", padx=10, pady=10)
+
+        right = ctk.CTkFrame(body)
+        right.pack(side="right", fill="both", expand=True, padx=10, pady=10)
+
+        # ===== LEFT PANEL: BOOKING FORM =====
+        ctk.CTkLabel(left, text="Booking Details", font=ctk.CTkFont(size=22, weight="bold")).pack(pady=(15, 10))
+
+        self.name = ctk.CTkEntry(left, placeholder_text="Customer Name")
+        self.name.pack(pady=8, padx=15, fill="x")
+
+        self.phone = ctk.CTkEntry(left, placeholder_text="Phone Number")
+        self.phone.pack(pady=8, padx=15, fill="x")
+
+        # Location search
+        ctk.CTkLabel(left, text="Search Location", font=ctk.CTkFont(size=12, weight="bold")).pack(pady=(15, 5), padx=15)
+        self.location_search = ctk.CTkEntry(left, placeholder_text="e.g., Kerala, Punjab, Assam")
+        self.location_search.pack(pady=5, padx=15, fill="x")
+        ctk.CTkButton(left, text="Search Location", command=self.search_location).pack(pady=5, padx=15, fill="x")
+
+        # Location selection (sorted alphabetically for easier browsing of all states/UTs)
+        ctk.CTkLabel(left, text="Select State / UT", font=ctk.CTkFont(size=12, weight="bold")).pack(pady=(10, 5), padx=15)
+        self.location = ctk.CTkOptionMenu(left, values=sorted(LOCATIONS_DATA.keys()), command=self.on_location_changed)
+        self.location.pack(pady=5, padx=15, fill="x")
+        self.location.set("tamil nadu")
+
+        # Hotel selection
+        ctk.CTkLabel(left, text="Select Hotel", font=ctk.CTkFont(size=12, weight="bold")).pack(pady=(10, 5), padx=15)
+        self.hotel = ctk.CTkOptionMenu(left, values=[])
+        self.hotel.pack(pady=5, padx=15, fill="x")
+
+        self.service = ctk.CTkOptionMenu(left, values=["Hotel Booking", "Tour Package", "Event Planning"])
+        self.service.pack(pady=8, padx=15, fill="x")
+        self.service.set("Hotel Booking")
+
+        self.date = ctk.CTkEntry(left, placeholder_text="YYYY-MM-DD")
+        self.date.pack(pady=8, padx=15, fill="x")
+
+        self.time = ctk.CTkEntry(left, placeholder_text="HH:MM")
+        self.time.pack(pady=8, padx=15, fill="x")
+
+        self.status = ctk.CTkOptionMenu(left, values=["Pending", "Confirmed", "Cancelled", "Completed"])
+        self.status.pack(pady=8, padx=15, fill="x")
+        self.status.set("Pending")
+
+        ctk.CTkButton(left, text="Add Booking", command=self.add_booking_ui).pack(pady=8, padx=15, fill="x")
+        ctk.CTkButton(left, text="Update Booking", command=self.update_booking_ui).pack(pady=8, padx=15, fill="x")
+        ctk.CTkButton(left, text="Delete Booking", fg_color="red", hover_color="#8b0000", command=self.delete_selected).pack(pady=8, padx=15, fill="x")
+        ctk.CTkButton(left, text="Export CSV", command=self.export_ui).pack(pady=8, padx=15, fill="x")
+        ctk.CTkButton(left, text="Clear Form", command=self.clear_form).pack(pady=8, padx=15, fill="x")
+
+        # ===== RIGHT PANEL: BOOKINGS TABLE & SEARCH =====
+        ctk.CTkLabel(right, text="Bookings", font=ctk.CTkFont(size=22, weight="bold")).pack(pady=(15, 10), padx=15)
+
+        self.search = ctk.CTkEntry(right, placeholder_text="Search booking ID, name, phone, location, hotel...")
+        self.search.pack(pady=10, padx=15, fill="x")
+
+        btn_row = ctk.CTkFrame(right)
+        btn_row.pack(fill="x", padx=15)
+
+        ctk.CTkButton(btn_row, text="Search", command=self.search_ui).pack(side="left", padx=5, pady=5)
+        ctk.CTkButton(btn_row, text="Show All", command=self.load_table).pack(side="left", padx=5, pady=5)
+
+        cols = ("ID", "Name", "Phone", "Location", "Hotel", "Service", "Date", "Time", "Status")
+        self.tree = ttk.Treeview(right, columns=cols, show="headings", height=18, style="Custom.Treeview")
+        for c in cols:
+            self.tree.heading(c, text=c)
+            self.tree.column(c, width=110, anchor="center")
+        self.tree.column("ID", width=120)
+        self.tree.pack(fill="both", expand=True, padx=15, pady=15)
+        self.tree.bind("<<TreeviewSelect>>", self.load_selected)
+
+        # Initialize location and load table
+        self.on_location_changed(self.location.get())
+        self.load_table()
+
+    def on_location_changed(self, location: str) -> None:
+        """Update hotel list when location changes."""
+        if location in LOCATIONS_DATA:
+            hotels = LOCATIONS_DATA[location]["hotels"]
+            self.hotel.configure(values=hotels)
+            self.hotel.set(hotels[0] if hotels else "")
+
+    def search_location(self) -> None:
+        """Search for a location and show hotels and attractions."""
+        search_term = self.location_search.get().strip().lower()
+
+        if not search_term:
+            messagebox.showwarning("Warning", "Enter a location to search")
+            return
+
+        # Find matching location (match against key or display name)
+        matched_location = None
+        for loc_key, loc_val in LOCATIONS_DATA.items():
+            if (search_term in loc_key or loc_key in search_term
+                    or search_term in loc_val["display_name"].lower()):
+                matched_location = loc_key
+                break
+
+        if not matched_location:
+            available = ", ".join(v["display_name"] for v in LOCATIONS_DATA.values())
+            messagebox.showinfo(
+                "Not Found",
+                f"Location '{search_term}' not found. Available locations: {available}"
+            )
+            return
+
+        # Display location info
+        loc_data = LOCATIONS_DATA[matched_location]
+        hotels = "\n".join([f"  • {h}" for h in loc_data["hotels"]])
+        attractions = "\n".join([f"  • {a}" for a in loc_data["attractions"]])
+
+        # Show in a popup
+        root = tk.Tk()
+        root.withdraw()
+
+        popup = ctk.CTkToplevel(root)
+        popup.title(f"{loc_data['display_name']} - Hotels & Attractions")
+        popup.geometry("500x600")
+
+        text_frame = ctk.CTkFrame(popup)
+        text_frame.pack(fill="both", expand=True, padx=15, pady=15)
+
+        ctk.CTkLabel(text_frame, text=f"{loc_data['display_name']}", font=ctk.CTkFont(size=18, weight="bold")).pack(pady=10)
+
+        # Hotels section
+        ctk.CTkLabel(text_frame, text="🏨 Hotels", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=10, pady=(10, 5))
+        hotels_text = ctk.CTkTextbox(text_frame, height=120)
+        hotels_text.pack(padx=10, pady=5, fill="x")
+        hotels_text.insert("0.0", hotels)
+        hotels_text.configure(state="disabled")
+
+        # Attractions section
+        ctk.CTkLabel(text_frame, text="🎢 Famous Places & Theme Parks", font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w", padx=10, pady=(10, 5))
+        attractions_text = ctk.CTkTextbox(text_frame, height=120)
+        attractions_text.pack(padx=10, pady=5, fill="x")
+        attractions_text.insert("0.0", attractions)
+        attractions_text.configure(state="disabled")
+
+        def select_location():
+            self.location.set(matched_location)
+            self.on_location_changed(matched_location)
+            popup.destroy()
+            root.destroy()
+
+        ctk.CTkButton(text_frame, text="Select This Location", command=select_location).pack(pady=15, fill="x", padx=10)
+
+        root.mainloop()
+
+    def validate_inputs(self) -> Optional[tuple[str, str, str, str, str]]:
+        """Validate form inputs and return cleaned values."""
+        n = self.name.get().strip()
+        p = self.phone.get().strip()
+        d = self.date.get().strip()
+        t = self.time.get().strip()
+        loc = self.location.get().strip()
+
+        if not validate_name(n):
+            messagebox.showerror("Error", "Name may include letters, spaces, apostrophes, and hyphens")
+            return None
+        if not validate_phone(p):
+            messagebox.showerror("Error", "Phone must be 10 digits")
+            return None
+        if not validate_date(d):
+            messagebox.showerror("Error", "Date must be YYYY-MM-DD and not in the past")
+            return None
+        if not validate_time(t):
+            messagebox.showerror("Error", "Time must be HH:MM")
+            return None
+        if not loc:
+            messagebox.showerror("Error", "Select a location")
+            return None
+
+        return n, p, d, t, loc
+
+    def add_booking_ui(self) -> None:
+        """Validate and create a booking."""
+        data = self.validate_inputs()
+        if not data:
+            return
+        n, p, d, t, loc = data
+        h = self.hotel.get()
+        s = self.service.get()
+
+        if not h:
+            messagebox.showerror("Error", "Select a hotel")
+            return
+
+        if booking_exists(d, t, s, loc, h):
+            messagebox.showerror("Error", "That slot is already booked")
+            return
+
+        create_booking(n, p, loc, h, s, d, t)
+        self.clear_form()
+        self.load_table()
+
+    def update_booking_ui(self) -> None:
+        """Validate and update the selected booking."""
+        if not self.is_admin():
+            messagebox.showerror("Access Denied", "Only admin can update bookings")
+            return
+        if not self.selected_booking_id:
+            messagebox.showwarning("Warning", "Select a booking first")
+            return
+
+        data = self.validate_inputs()
+        if not data:
+            return
+        n, p, d, t, loc = data
+        h = self.hotel.get()
+        s = self.service.get()
+        st = self.status.get()
+
+        if not h:
+            messagebox.showerror("Error", "Select a hotel")
+            return
+
+        if booking_exists(d, t, s, loc, h, exclude_booking_id=self.selected_booking_id):
+            messagebox.showerror("Error", "That slot is already booked")
+            return
+
+        update_booking(self.selected_booking_id, n, p, loc, h, s, d, t, st)
+        self.clear_form()
+        self.selected_booking_id = None
+        self.load_table()
+
+    def delete_selected(self) -> None:
+        """Delete the selected booking after confirmation."""
+        if not self.is_admin():
+            messagebox.showerror("Access Denied", "Only admin can delete bookings")
+            return
+        if not self.selected_booking_id:
+            messagebox.showwarning("Warning", "Select a booking first")
+            return
+        if not messagebox.askyesno("Delete", "Delete this booking?"):
+            return
+        delete_booking(self.selected_booking_id)
+        self.selected_booking_id = None
+        self.clear_form()
+        self.load_table()
+
+    def search_ui(self) -> None:
+        """Search bookings using the search box."""
+        term = self.search.get().strip()
+        rows = search_bookings(term) if term else fetch_all_bookings()
+        self.fill_table(rows)
+
+    def export_ui(self) -> None:
+        """Export all bookings to a user-chosen CSV file."""
+        rows = fetch_all_bookings()
+        path = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            filetypes=[("CSV files", "*.csv")]
+        )
+        if not path:
+            return
+        export_csv(path, rows)
+        messagebox.showinfo("Export", "CSV exported successfully")
+
+    def load_table(self) -> None:
+        """Load all bookings into the table."""
+        self.fill_table(fetch_all_bookings())
+
+    def fill_table(self, rows: list[tuple[Any, ...]]) -> None:
+        """Replace all table rows with new data."""
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        for row in rows:
+            # Display only relevant columns
+            self.tree.insert("", "end", values=row[:9])
+
+    def load_selected(self, event: Optional[tk.Event] = None) -> None:
+        """Load the selected table row into the form."""
+        sel = self.tree.selection()
+        if not sel:
+            return
+        vals = self.tree.item(sel[0], "values")
+        self.selected_booking_id = vals[0]
+
+        self.name.delete(0, tk.END)
+        self.name.insert(0, vals[1])
+
+        self.phone.delete(0, tk.END)
+        self.phone.insert(0, vals[2])
+
+        self.location.set(vals[3])
+        self.on_location_changed(vals[3])
+        self.hotel.set(vals[4])
+
+        self.service.set(vals[5])
+
+        self.date.delete(0, tk.END)
+        self.date.insert(0, vals[6])
+
+        self.time.delete(0, tk.END)
+        self.time.insert(0, vals[7])
+
+        self.status.set(vals[8])
+
+    def clear_form(self) -> None:
+        """Clear the booking form fields and selection."""
+        for e in [self.name, self.phone, self.date, self.time, self.location_search]:
+            e.delete(0, tk.END)
+        self.location.set("tamil nadu")
+        self.on_location_changed("tamil nadu")
+        self.service.set("Hotel Booking")
+        self.status.set("Pending")
+        self.selected_booking_id = None
+
+
+if __name__ == "__main__":
+    init_db()
+    app = App()
+    app.mainloop()
