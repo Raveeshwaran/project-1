@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECE Master Roadmap - 1st Year to Tier-1 Placement</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1a3a52 0%, #2c5aa0 100%);
+            color: white;
+            padding: 1rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: opacity 0.3s;
+        }
+
+        nav a:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #1a3a52 0%, #2c5aa0 100%);
+            color: white;
+            padding: 4rem 2rem;
+            margin: 2rem 0;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .hero .subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            opacity: 0.95;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto 2rem;
+            line-height: 1.8;
+        }
+
+        .badge-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 2rem;
+        }
+
+        .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.5);
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .badge:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: white;
+        }
+
+        section {
+            background: white;
+            padding: 3rem 2rem;
+            margin: 2rem 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        h2 {
+            color: #1a3a52;
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            border-left: 5px solid #2c5aa0;
+            padding-left: 1rem;
+        }
+
+        h3 {
+            color: #2c5aa0;
+            font-size: 1.5rem;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        h4 {
+            color: #2c5aa0;
+            font-size: 1.1rem;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .track-box {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+            border-left: 5px solid #2c5aa0;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-radius: 6px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .track-box:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(44, 90, 160, 0.15);
+        }
+
+        .track-box.vlsi {
+            border-left-color: #e74c3c;
+        }
+
+        .track-box.embedded {
+            border-left-color: #3498db;
+        }
+
+        .track-box.software {
+            border-left-color: #27ae60;
+        }
+
+        .principles {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .principle {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-top: 4px solid #2c5aa0;
+        }
+
+        .principle strong {
+            color: #1a3a52;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            overflow-x: auto;
+        }
+
+        th {
+            background: #1a3a52;
+            color: white;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        tr:hover {
+            background: #e9ecef;
+        }
+
+        .company-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .company-card {
+            background: linear-gradient(135deg, #2c5aa0 0%, #1a3a52 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .company-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(44, 90, 160, 0.3);
+        }
+
+        .semester-box {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+            border: 2px solid #2c5aa0;
+            border-radius: 8px;
+            padding: 2rem;
+            margin: 1.5rem 0;
+        }
+
+        .semester-box h3 {
+            margin-top: 0;
+        }
+
+        .semester-title {
+            color: #2c5aa0;
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .semester-desc {
+            color: #666;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+
+        .skill-item, .subject-item, .project-item {
+            background: white;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-left: 4px solid #2c5aa0;
+            border-radius: 4px;
+        }
+
+        .readiness-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 30px;
+            margin-top: 1rem;
+            overflow: hidden;
+        }
+
+        .readiness-fill {
+            background: linear-gradient(90deg, #2c5aa0 0%, #3498db 100%);
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-button.active {
+            color: #2c5aa0;
+            border-bottom-color: #2c5aa0;
+            font-weight: 600;
+        }
+
+        .tab-button:hover {
+            color: #2c5aa0;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+            text-align: center;
+        }
+
+        .stat-box {
+            padding: 2rem;
+            background: linear-gradient(135deg, #2c5aa0 0%, #1a3a52 100%);
+            color: white;
+            border-radius: 8px;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .checklist {
+            list-style: none;
+            margin: 1rem 0;
+        }
+
+        .checklist li {
+            padding: 0.8rem 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .checklist li:before {
+            content: "☐ ";
+            color: #2c5aa0;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .circuit-diagram {
+            background: white;
+            border: 2px solid #ddd;
+            padding: 2rem;
+            margin: 1rem 0;
+            border-radius: 8px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+        }
+
+        .timeline {
+            position: relative;
+            padding: 2rem 0;
+        }
+
+        .timeline-item {
+            margin-bottom: 2rem;
+            padding-left: 50px;
+            border-left: 3px solid #2c5aa0;
+            position: relative;
+        }
+
+        .timeline-item:before {
+            content: '';
+            position: absolute;
+            left: -9px;
+            top: 0;
+            width: 15px;
+            height: 15px;
+            background: #2c5aa0;
+            border-radius: 50%;
+        }
+
+        .timeline-label {
+            font-weight: bold;
+            color: #1a3a52;
+            margin-bottom: 0.5rem;
+        }
+
+        .timeline-content {
+            color: #666;
+        }
+
+        footer {
+            background: #1a3a52;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+
+        .responsive-table-wrapper {
+            overflow-x: auto;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            nav ul {
+                gap: 1rem;
+                font-size: 0.85rem;
+            }
+
+            .container {
+                padding: 0 1rem;
+            }
+
+            section {
+                padding: 1.5rem 1rem;
+            }
+
+            .principles, .company-grid, .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            nav ul {
+                justify-content: center;
+            }
+        }
+
+        .alert {
+            background: #e8f4f8;
+            border-left: 4px solid #3498db;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+
+        .alert-title {
+            font-weight: bold;
+            color: #2c5aa0;
+        }
+
+        code {
+            background: #f5f7fa;
+            padding: 0.2rem 0.4rem;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="header-content">
+            <div class="logo">ECE Master Roadmap</div>
+            <nav>
+                <ul>
+                    <li><a href="#intro">Intro</a></li>
+                    <li><a href="#tracks">Tracks</a></li>
+                    <li><a href="#companies">Companies</a></li>
+                    <li><a href="#roadmap">Roadmap</a></li>
+                    <li><a href="#projects">Projects</a></li>
+                    <li><a href="#resources">Resources</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <div class="hero">
+        <h1>ECE Master Roadmap</h1>
+        <div class="subtitle">1st Year → Tier-1 Placement</div>
+        <p>From soldering iron to silicon to software — your structured pathway to hardware, embedded, VLSI and software roles at the world's top companies.</p>
+        
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-number">4</div>
+                <div class="stat-label">Years Planned</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">60+</div>
+                <div class="stat-label">Projects</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">40+</div>
+                <div class="stat-label">Tier-1 Companies</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">3</div>
+                <div class="stat-label">Parallel Tracks</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Introduction Section -->
+        <section id="intro">
+            <h2>Introduction & How to Use This Roadmap</h2>
+            
+            <div class="alert">
+                <div class="alert-title">🎯 Getting Started</div>
+                <p>This document is a semester-by-semester blueprint for an ECE undergraduate who wants to end college with real options — a Tier-1 core hardware offer (VLSI / embedded / semiconductor), a Tier-1 software product offer (Google / Amazon-tier SDE / quant), or both.</p>
+            </div>
+
+            <h3>Four Principles That Make This Work</h3>
+            <div class="principles">
+                <div class="principle">
+                    <strong>1. Consistency > Intensity</strong>
+                    <p>A student who codes 1 hour a day for 4 years beats a student who binges 12 hours before every interview. Every weekly plan here assumes ~5–7 focused hours outside class.</p>
+                </div>
+                <div class="principle">
+                    <strong>2. Projects > Textbooks</strong>
+                    <p>Recruiters cannot verify your CGPA in 30 minutes, but they can look at your GitHub. Ship one small project per month, one flagship per year.</p>
+                </div>
+                <div class="principle">
+                    <strong>3. Depth in One Track, Literacy in All</strong>
+                    <p>By Sem 5 you must pick a primary track (VLSI / Embedded / SDE / Quant). But keep DSA and one core electronics subject fresh throughout — it is your safety net.</p>
+                </div>
+                <div class="principle">
+                    <strong>4. Language & Communication</strong>
+                    <p>English fluency is the base level. German (or French/Japanese) unlocks Bosch, Siemens, Infineon, BMW, Mercedes R&D. Practise talking about your projects out loud.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tracks Section -->
+        <section id="tracks">
+            <h2>The Three Tracks — Pick Your Weapon</h2>
+            <p style="font-size: 1.1rem; margin-bottom: 2rem;"><strong>DECIDE BY END OF SEM 4</strong></p>
+            <p>An ECE degree touches all three worlds below. You cannot go deep in all three, but you must know all three exist. Read the columns, and mark the one that makes you lean forward.</p>
+
+            <div class="track-box vlsi">
+                <h3>🔬 Core Hardware — VLSI · Semiconductor · Analog IC · RF</h3>
+                <ul style="margin-left: 2rem;">
+                    <li><strong>Skills:</strong> Verilog / SystemVerilog / UVM, Synthesis, STA, physical design</li>
+                    <li><strong>Tools:</strong> Cadence / Synopsys / Mentor tools</li>
+                    <li><strong>Career Path:</strong> MS abroad common at top firms</li>
+                    <li><strong>Target Companies:</strong> Intel, NVIDIA, AMD, Qualcomm, Synopsys, Cadence, TI, Samsung, Micron</li>
+                </ul>
+            </div>
+
+            <div class="track-box embedded">
+                <h3>🤖 Embedded / IoT — Firmware · RTOS · Linux · Robotics</h3>
+                <ul style="margin-left: 2rem;">
+                    <li><strong>Skills:</strong> C / C++ / ARM Cortex-M & A, FreeRTOS & Embedded Linux</li>
+                    <li><strong>Focus:</strong> Device drivers, protocols (I²C, SPI, CAN)</li>
+                    <li><strong>Projects:</strong> PCB design, board bring-up, debug</li>
+                    <li><strong>Target Companies:</strong> Bosch, Siemens, NXP, ST, Infineon, TI, Qualcomm MCU</li>
+                </ul>
+            </div>
+
+            <div class="track-box software">
+                <h3>💻 Software / SDE — Backend · ML · Quant · Systems</h3>
+                <ul style="margin-left: 2rem;">
+                    <li><strong>Skills:</strong> DSA + one strong language, System design (LLD + HLD)</li>
+                    <li><strong>Focus:</strong> Databases, distributed systems, open-source contributions</li>
+                    <li><strong>Market:</strong> Highest packages, most openings</li>
+                    <li><strong>Target Companies:</strong> Google, Microsoft, Amazon, Meta, Adobe, DE Shaw, Uber, Stripe</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Companies Section -->
+        <section id="companies">
+            <h2>Tier-1 Company Directory</h2>
+
+            <h3>Core & Semiconductor Companies</h3>
+            <div class="responsive-table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Company</th>
+                            <th>Domain</th>
+                            <th>ECE Roles</th>
+                            <th>Approx CTC (LPA)</th>
+                            <th>Key Skills</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Intel</strong></td>
+                            <td>Semiconductor</td>
+                            <td>Design Engineer, Verification, Physical Design</td>
+                            <td>₹22–48</td>
+                            <td>Verilog, SystemVerilog, UVM, STA, C</td>
+                        </tr>
+                        <tr>
+                            <td><strong>NVIDIA</strong></td>
+                            <td>GPU / AI Silicon</td>
+                            <td>ASIC Design, Verification, GPU Arch</td>
+                            <td>₹28–75</td>
+                            <td>SystemVerilog, UVM, Python, GPU arch</td>
+                        </tr>
+                        <tr>
+                            <td><strong>AMD</strong></td>
+                            <td>CPU / GPU</td>
+                            <td>SoC Design, Verification, DV, PD</td>
+                            <td>₹22–55</td>
+                            <td>Verilog, SVA, DFT, floor-planning</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Qualcomm</strong></td>
+                            <td>Wireless SoC</td>
+                            <td>Modem, RF, DSP, Embedded, ASIC</td>
+                            <td>₹24–60</td>
+                            <td>C/C++, DSP, Verilog, RTOS, 5G/PHY</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Texas Instruments</strong></td>
+                            <td>Analog + Embedded</td>
+                            <td>Analog IC Design, MCU Firmware, DSP</td>
+                            <td>₹20–48</td>
+                            <td>Analog CMOS, Cadence, C, ADC/DAC</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Bosch</strong></td>
+                            <td>Automotive Embedded</td>
+                            <td>Embedded C, AUTOSAR, ADAS</td>
+                            <td>₹9–22</td>
+                            <td>C, MISRA, CAN, AUTOSAR, RTOS</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Samsung</strong></td>
+                            <td>Memory / SoC</td>
+                            <td>DRAM, NAND, Foundry, SoC design</td>
+                            <td>₹20–45</td>
+                            <td>Verilog, memory design, DFT</td>
+                        </tr>
+                        <tr>
+                            <td><strong>NXP Semiconductors</strong></td>
+                            <td>Auto + IoT MCUs</td>
+                            <td>MCU Firmware, ASIC, Auto radar</td>
+                            <td>₹18–36</td>
+                            <td>C, ARM Cortex-M, CAN, RF</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Software / Product / Quant Companies (ECE Fully Eligible)</h3>
+            <div class="responsive-table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Company</th>
+                            <th>Domain</th>
+                            <th>ECE Roles</th>
+                            <th>Approx CTC (LPA)</th>
+                            <th>Key Skills</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Google</strong></td>
+                            <td>Products + Cloud</td>
+                            <td>SDE, SDE-ML, SRE, Hardware</td>
+                            <td>₹45–85+</td>
+                            <td>DSA (hard), system design, C++/Java/Go/Py</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Microsoft</strong></td>
+                            <td>Cloud + OS + Office</td>
+                            <td>SDE, SDE-ML, Data</td>
+                            <td>₹35–65</td>
+                            <td>DSA, C++/C#, Azure, LLD/HLD</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Amazon</strong></td>
+                            <td>E-comm + AWS</td>
+                            <td>SDE 1, AWS SDE, Alexa</td>
+                            <td>₹28–52</td>
+                            <td>DSA, OS, DB, LLD, Java/C++</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Meta</strong></td>
+                            <td>Social + AR/VR</td>
+                            <td>SDE, Prod. Infra, ML</td>
+                            <td>₹50–95+</td>
+                            <td>DSA (very hard), HLD, ML</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Netflix</strong></td>
+                            <td>Streaming</td>
+                            <td>Backend, Data Eng, ML</td>
+                            <td>₹40–90</td>
+                            <td>Distributed systems, Java, ML</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Uber</strong></td>
+                            <td>Mobility / Delivery</td>
+                            <td>Backend SDE, Data</td>
+                            <td>₹35–60</td>
+                            <td>Go, Java, DSA, HLD</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Stripe</strong></td>
+                            <td>Payments</td>
+                            <td>SDE, Backend</td>
+                            <td>₹38–65</td>
+                            <td>Ruby, Go, DSA, systems</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DE Shaw</strong></td>
+                            <td>Quant</td>
+                            <td>Quant Analyst, Dev</td>
+                            <td>₹35–65+</td>
+                            <td>Math, DSA, Python/C++</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 4-Year Roadmap Section -->
+        <section id="roadmap">
+            <h2>The 4-Year Semester-by-Semester Roadmap</h2>
+
+            <h3>Semester 1: Foundations — Settle In, Build Habits</h3>
+            <div class="semester-box">
+                <div class="semester-title">Focus: ~40h/week | Readiness: 10%</div>
+                <div class="semester-desc">Mathematics 1, Basic Electrical, Physics, Programming in C</div>
+                
+                <h4>Skills to Learn</h4>
+                <div class="skill-item">Typing speed > 40 WPM, VS Code, Linux basics (Ubuntu / WSL)</div>
+                <div class="skill-item">Git & GitHub — first commits, first repo</div>
+                <div class="skill-item">Breadboarding, resistor color codes, DMM usage</div>
+                
+                <h4>Projects (Pick 2)</h4>
+                <div class="project-item">• Blinking LED with 555 timer on breadboard</div>
+                <div class="project-item">• Simple calculator in C (menu-driven)</div>
+                <div class="project-item">• 7-segment display counter (with switches)</div>
+                
+                <div class="readiness-bar">
+                    <div class="readiness-fill" style="width: 10%;">10%</div>
+                </div>
+            </div>
+
+            <h3>Semester 2: C Mastery + First Electronics Lab</h3>
+            <div class="semester-box">
+                <div class="semester-title">Focus: ~40h/week | Readiness: 18%</div>
+                <div class="semester-desc">Mathematics 2, Electronic Devices, Digital Logic Design, Data Structures</div>
+                
+                <h4>Skills to Learn</h4>
+                <div class="skill-item">C pointers, malloc, structs (interview gold)</div>
+                <div class="skill-item">Bash scripting basics, Makefiles</div>
+                <div class="skill-item">KiCad / EasyEDA — draw your first schematic</div>
+                <div class="skill-item">Start LeetCode Easy — target 50 problems</div>
+                
+                <h4>Projects</h4>
+                <div class="project-item">• Digital clock on 4-digit 7-seg + 555</div>
+                <div class="project-item">• Bank account manager in C using structs + file I/O</div>
+                <div class="project-item">• Logic gates using transistors (breadboard)</div>
+                
+                <div class="readiness-bar">
+                    <div class="readiness-fill" style="width: 18%;">18%</div>
+                </div>
+            </div>
+
+            <h3>Semester 3: DSA Starts + First "Real" Circuits</h3>
+            <div class="semester-box">
+                <div class="semester-title">Focus: ~45h/week | Readiness: 30%</div>
+                <div class="semester-desc">Signals & Systems, Analog Electronics 1, Digital Logic Design, DSA</div>
+                
+                <h4>Skills to Learn</h4>
+                <div class="skill-item">C++ STL basics: vector, map, set, sort</div>
+                <div class="skill-item">LeetCode Easy → Medium: 150 problems this sem</div>
+                <div class="skill-item">Arduino / STM32 GPIO, ADC, PWM</div>
+                <div class="skill-item">SPICE simulation (LTspice / ngspice)</div>
+                
+                <h4>Projects</h4>
+                <div class="project-item">• Line-follower / obstacle-avoiding robot</div>
+                <div class="project-item">• Astable multivibrator + duty-cycle experiment</div>
+                <div class="project-item">• Traffic-light FSM in Verilog on iVerilog simulator</div>
+                
+                <div class="readiness-bar">
+                    <div class="readiness-fill" style="width: 30%;">30%</div>
+                </div>
+            </div>
+
+            <h3>Semester 4: Choose Your Track by End of This Sem</h3>
+            <div class="semester-box">
+                <div class="semester-title">Focus: ~48h/week | Readiness: 45%</div>
+                <div class="semester-desc">Analog Electronics 2, Microprocessors & Microcontrollers, DBMS or OS</div>
+                
+                <h4>Skills to Learn</h4>
+                <div class="skill-item">C++/Java one strong OOP language</div>
+                <div class="skill-item">LeetCode Medium — 100 problems this sem</div>
+                <div class="skill-item">Verilog + testbench; simulate FSMs on EDA Playground</div>
+                <div class="skill-item">STM32CubeIDE — first bare-metal blink</div>
+                
+                <h4>Flagship Project This Semester</h4>
+                <div class="project-item">• UART-based communication between two boards</div>
+                <div class="project-item">• Op-amp instrumentation amplifier + ECG signal capture</div>
+                <div class="project-item">• Backend URL-shortener in Node.js/Django (for software track)</div>
+                
+                <div class="readiness-bar">
+                    <div class="readiness-fill" style="width: 45%;">45%</div>
+                </div>
+            </div>
+
+            <h3>Semester 5: Depth — Track Specialisation Begins</h3>
+            <div class="semester-box">
+                <div class="semester-title">Focus: ~50h/week | Readiness: 62%</div>
+                <div class="semester-desc">VLSI Design / Digital IC, Communication Systems, Control Systems, Computer Networks</div>
+                
+                <h4>Skills by Track</h4>
+                <div class="project-item"><strong>VLSI:</strong> SystemVerilog + UVM basics, Cadence Virtuoso intro</div>
+                <div class="project-item"><strong>Embedded:</strong> FreeRTOS on STM32, I²C/SPI drivers</div>
+                <div class="project-item"><strong>SDE:</strong> LeetCode Medium 150 total; LLD (parking lot, splitwise)</div>
+                
+                <h4>Projects</h4>
+                <div class="project-item">• Own 32-bit RISC-V single-cycle CPU in Verilog</div>
+                <div class="project-item">• Full-stack todo/expense app with auth & DB (SDE portfolio)</div>
+                <div class="project-item">• OLED spectrum analyzer on STM32 with FFT</div>
+                
+                <div class="readiness-bar">
+                    <div class="readiness-fill" style="width: 62%;">62%</div>
+                </div>
+            </div>
+
+            <h3>Semester 6: Big Projects, Big Interview Prep Starts</h3>
+            <div class="semester-box">
+                <div class="semester-title">Focus: ~50h/week | Readiness: 78%</div>
+                <div class="semester-desc">VLSI Testing, Embedded Systems, DSP, Operating Systems</div>
+                
+                <h4>Key Milestones</h4>
+                <div class="project-item">• System Design LLD: 12+ problems (parking lot, elevator, etc.)</div>
+                <div class="project-item">• SQL + one NoSQL (Redis / MongoDB)</div>
+                <div class="project-item">• DSA: LeetCode Hard 30 problems</div>
+                
+                <h4>Portfolio Projects</h4>
+                <div class="project-item">• Custom pipelined RISC-V core with hazard detection</div>
+                <div class="project-item">• Linux device driver for a custom character device</div>
+                <div class="project-item">• Distributed key-value store (Go/Java)</div>
+                
+                <div class="readiness-bar">
+                    <div class="readiness-fill" style="width: 78%;">78%</div>
+                </div>
+            </div>
+
+            <h3>Semester 7: Placement Season · Execute Relentlessly</h3>
+            <div class="semester-box">
+                <div class="semester-title">Focus: ~55h/week | Readiness: 90%</div>
+                <div class="semester-desc">Electives, Project / Thesis Part 1, Final Prep</div>
+                
+                <h4>Activities</h4>
+                <div class="project-item">• Final revision of DSA — LeetCode 400+ solved, 100 revisit</div>
+                <div class="project-item">• System design mock 2×/week</div>
+                <div class="project-item">• Core interview grinder — HDL coding, analog qualitative</div>
+                <div class="project-item">• Register for on-campus placements</div>
+                <div class="project-item">• Off-campus applications: 5 per week</div>
+                
+                <div class="readiness-bar">
+                    <div class="readiness-fill" style="width: 90%;">90%</div>
+                </div>
+            </div>
+
+            <h3>Semester 8: Convert, Transition, Prepare for Role</h3>
+            <div class="semester-box">
+                <div class="semester-title">Focus: ~40h/week | Readiness: 100%</div>
+                <div class="semester-desc">Final Year Project, Bridge Courses, Onboarding</div>
+                
+                <h4>Final Steps</h4>
+                <div class="project-item">• Off-campus job hunt if unplaced — 20+ applications/week</div>
+                <div class="project-item">• Publish blog / IEEE paper from thesis</div>
+                <div class="project-item">• Complete German A2 / start B1 (if Germany-track)</div>
+                <div class="project-item">• Onboarding prep, tax + salary docs</div>
+                
+                <div class="readiness-bar">
+                    <div class="readiness-fill" style="width: 100%;">100%</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Programming & CS Skills -->
+        <section>
+            <h2>Core Programming & CS Skills — Mandatory for All Tracks</h2>
+            <p>These skills are the foundation whether you end up designing chips at Intel or writing distributed systems at Amazon.</p>
+
+            <div class="responsive-table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Skill</th>
+                            <th>Target Level</th>
+                            <th>By When</th>
+                            <th>Best Resource</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>C</strong></td>
+                            <td>Fluent — read/write embedded code</td>
+                            <td>End of Sem 2</td>
+                            <td>K&R book, Modern C</td>
+                        </tr>
+                        <tr>
+                            <td><strong>C++</strong></td>
+                            <td>Confident for interviews</td>
+                            <td>End of Sem 4</td>
+                            <td>learncpp.com, Effective Modern C++</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Python</strong></td>
+                            <td>Everyday tool</td>
+                            <td>End of Sem 3</td>
+                            <td>Automate the Boring Stuff, Corey Schafer</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Data Structures & Algorithms</strong></td>
+                            <td>400+ LC problems, all topics</td>
+                            <td>By Sem 7</td>
+                            <td>Striver A2Z, Neetcode 150, CLRS</td>
+                        </tr>
+                        <tr>
+                            <td><strong>System Design LLD</strong></td>
+                            <td>Design 12+ classic problems</td>
+                            <td>Sem 5–6</td>
+                            <td>Grokking LLD, Anmol Sehgal</td>
+                        </tr>
+                        <tr>
+                            <td><strong>System Design HLD</strong></td>
+                            <td>Design URL shortener, WhatsApp, Uber</td>
+                            <td>Sem 6–7</td>
+                            <td>Alex Xu Vol 1 & 2, System Design Primer</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Databases</strong></td>
+                            <td>SQL joins, indexes, transactions, Redis</td>
+                            <td>Sem 5</td>
+                            <td>Sillberschatz DBMS, MongoDB University</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Linux & Shell</strong></td>
+                            <td>Comfortable on CLI, write bash</td>
+                            <td>End of Sem 3</td>
+                            <td>MIT Missing Semester, Ryan's tutorial</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Projects Section -->
+        <section id="projects">
+            <h2>60+ Projects Bank</h2>
+            <p><strong>BUILD MORE THAN YOU READ</strong></p>
+            <p>Ordered by difficulty and tagged by track. Pick at least one from every band as you progress.</p>
+
+            <h3>Band 1 — Core Beginner (10)</h3>
+            <div class="responsive-table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Project</th>
+                            <th>Skills</th>
+                            <th>Track</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>LED Chaser Patterns (555 / Arduino)</td>
+                            <td>GPIO, timers, breadboard</td>
+                            <td>EMB</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Digital Clock (RTC + 7-seg)</td>
+                            <td>Timer, display, drivers</td>
+                            <td>EMB</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>Menu-driven Calculator in C</td>
+                            <td>C basics, switch/if, math</td>
+                            <td>SDE</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>Line-Follower Robot</td>
+                            <td>Op-amp comparator, motor</td>
+                            <td>EMB</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>Traffic Light FSM (Verilog)</td>
+                            <td>Digital design, testbench</td>
+                            <td>VLSI</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Band 2 — Core Intermediate (15)</h3>
+            <p>Projects include: UART Bootloader, Custom I²C Driver, SPI Flash Logger, Bluetooth RC Car, FreeRTOS Demo, OLED Spectrum Analyzer, GPS Tracker, CAN Bus Node, LoRa Chat, Custom PCB Badge, and more.</p>
+
+            <h3>Band 3 — Core Advanced (15)</h3>
+            <p>Projects include: Custom RISC-V Core on FPGA, DMA-Based Audio Pipeline, USB HID Device, Linux Character Device Driver, Hardware Crypto Engine, Neural Net Accelerator, SDR Receiver, and more.</p>
+
+            <h3>Band 4 — Software Projects (15)</h3>
+            <p>Projects include: URL Shortener, Chat App, E-commerce Backend, Netflix-clone, Ola/Uber-clone, Distributed Key-Value Store, Mini-Docker, Custom Search Engine, and more.</p>
+
+            <h3>Band 5 — Research / Publishing (10)</h3>
+            <p>Projects include: Open-Source Silicon Tape-out, AI Accelerator, Neuromorphic Chip Experiments, Photonic Computing, and more high-impact research projects.</p>
+        </section>
+
+        <!-- Interview Preparation -->
+        <section>
+            <h2>Interview Preparation</h2>
+
+            <h3>Résumé Structure</h3>
+            <div class="alert">
+                <div class="alert-title">One-Page Format</div>
+                <ol style="margin-left: 2rem;">
+                    <li>Header — Name · phone · email · GitHub · LinkedIn · Portfolio</li>
+                    <li>Education — Degree · Institute · CGPA · Year</li>
+                    <li>Skills — Languages · Tools · Domains (grouped, NOT bulleted)</li>
+                    <li>Projects (3–5) — name + tech stack + 3 STAR bullets with numbers</li>
+                    <li>Experience — Internships / open-source · dates · STAR bullets</li>
+                    <li>Achievements — Codeforces rating, Kaggle rank, hackathon wins</li>
+                </ol>
+            </div>
+
+            <h3>LinkedIn Optimization Checklist</h3>
+            <ul class="checklist">
+                <li>Professional headshot (plain background, smile, well-lit)</li>
+                <li>Banner image with your specialization visualized</li>
+                <li>Headline: "ECE @ IIT-XYZ · VLSI · Verilog · SV/UVM"</li>
+                <li>About: 3-para hook — passion + skills + ask</li>
+                <li>Featured section: pin flagship project, blog, GitHub</li>
+                <li>Experience: STAR bullets (mirror résumé)</li>
+                <li>Skills: 15+ endorsed by peers</li>
+                <li>Certifications: Coursera, AWS, Goethe visible</li>
+                <li>Open to work banner ON</li>
+                <li>Recommendations: 3+ from professors / mentors</li>
+            </ul>
+
+            <h3>GitHub Portfolio Rules</h3>
+            <ul class="checklist">
+                <li>Pinned 6 repos = your 6 best projects</li>
+                <li>Every repo has a README with: goal · demo GIF · setup · tech stack</li>
+                <li>License file (MIT / Apache-2.0)</li>
+                <li>.gitignore per language</li>
+                <li>CI badge (GitHub Actions)</li>
+                <li>Green squares — 4+ commits/week for 3 months</li>
+                <li>Custom profile README with your journey</li>
+            </ul>
+
+            <h3>Mock Interview Topic Bank</h3>
+            <h4>Core (Hardware / Embedded / VLSI)</h4>
+            <ul style="margin-left: 2rem;">
+                <li><strong>Analog:</strong> Op-amp virtual-short, feedback stability, BJT active region</li>
+                <li><strong>Digital:</strong> FSM design, metastability, synchronizers, timing violations</li>
+                <li><strong>Embedded C:</strong> Pointer arithmetic, volatile, ISR pitfalls, endianness</li>
+                <li><strong>VLSI:</strong> Flops vs latches, setup/hold, MUX-based decoder</li>
+            </ul>
+
+            <h4>Software (SDE / Quant)</h4>
+            <ul style="margin-left: 2rem;">
+                <li><strong>DSA:</strong> LeetCode Medium-Hard 400+ mixed topics</li>
+                <li><strong>LLD:</strong> Parking lot · Elevator · Splitwise · Vending machine · Chess</li>
+                <li><strong>HLD:</strong> URL shortener · WhatsApp · Twitter · Netflix · Uber</li>
+                <li><strong>CS Core:</strong> Paging, TCP handshake, indexes, deadlock</li>
+            </ul>
+        </section>
+
+        <!-- Resources Section -->
+        <section id="resources">
+            <h2>Embedded Systems Roadmap</h2>
+            
+            <h3>Six-Branch Mind Map</h3>
+            <div style="background: #f8f9fa; padding: 2rem; border-radius: 8px; margin: 1rem 0;">
+                <h4>1 · Bare-Metal</h4>
+                <p>GPIO · Timers · ADC · UART · PWM | Arduino → STM32 → ESP32</p>
+                
+                <h4>2 · Protocols</h4>
+                <p>I²C · SPI · CAN · Modbus · USB | BLE · Zigbee · LoRa · MQTT</p>
+                
+                <h4>3 · RTOS</h4>
+                <p>FreeRTOS · Zephyr · ThreadX | tasks · queues · semaphores · ISRs</p>
+                
+                <h4>4 · Embedded Linux</h4>
+                <p>Yocto · Buildroot · Raspberry Pi | Device tree · sysfs · dmesg</p>
+                
+                <h4>5 · Drivers & Kernel</h4>
+                <p>char / block · IRQ · DMA | module · ioctl · devmem</p>
+                
+                <h4>6 · Edge AI</h4>
+                <p>TensorFlow Lite Micro · CMSIS-NN · TinyML on MCU</p>
+            </div>
+
+            <h3>Must-Know Peripherals Checklist</h3>
+            <ul class="checklist">
+                <li>GPIO — input, output, pull-up/down, edge interrupt</li>
+                <li>ADC — single & continuous conversion, DMA read</li>
+                <li>DAC — waveform generation</li>
+                <li>Timers — PWM, input capture, compare</li>
+                <li>UART / USART — polling, interrupt, DMA</li>
+                <li>I²C — master and slave</li>
+                <li>SPI — master, DMA, TFT / SD card</li>
+                <li>CAN — automotive networking</li>
+                <li>USB CDC (virtual COM)</li>
+                <li>USB HID (keyboard, mouse, custom)</li>
+                <li>Watchdog / IWDG for reliability</li>
+                <li>RTC + low-power modes (Stop, Standby)</li>
+                <li>Flash memory read/write, EEPROM emulation</li>
+                <li>DMA between peripherals</li>
+                <li>Bootloader & OTA firmware update</li>
+                <li>Interrupt priorities, NVIC, PendSV</li>
+            </ul>
+        </section>
+
+        <!-- VLSI Section -->
+        <section>
+            <h2>VLSI / Semiconductor Roadmap</h2>
+            
+            <h3>Six Pillars of VLSI</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+                <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #2c5aa0;">
+                    <h4>1 · Fundamentals</h4>
+                    <p>CMOS · Combinational · Sequential · Boolean · FSM · Timing</p>
+                </div>
+                <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #2c5aa0;">
+                    <h4>2 · HDL</h4>
+                    <p>Verilog · SystemVerilog · Testbench · Assertions · Coverage</p>
+                </div>
+                <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #2c5aa0;">
+                    <h4>3 · Verification</h4>
+                    <p>UVM · Constrained-random · Formal · Assertions · Coverage</p>
+                </div>
+                <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #2c5aa0;">
+                    <h4>4 · Synthesis + STA</h4>
+                    <p>DC · Genus · Setup/Hold · Prime Time · Tempus</p>
+                </div>
+                <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #2c5aa0;">
+                    <h4>5 · Physical Design</h4>
+                    <p>Floorplan · P&R · Clock tree · Innovus · ICC2 · OpenROAD</p>
+                </div>
+                <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #2c5aa0;">
+                    <h4>6 · DFT + Signoff</h4>
+                    <p>Scan · ATPG · BIST · DRC · LVS · Calibre</p>
+                </div>
+            </div>
+
+            <h3>Tool Inventory</h3>
+            <div class="alert">
+                <div class="alert-title">Commercial Tools (Learn One)</div>
+                <p>Cadence Innovus / Genus / Virtuoso · Synopsys DC / ICC2 / PrimeTime / VCS · Mentor / Siemens Calibre · Xilinx Vivado · Intel Quartus Prime</p>
+            </div>
+
+            <div class="alert">
+                <div class="alert-title">Free & Open-Source (Start Here)</div>
+                <p>iVerilog + GTKWave (simulation) · Verilator (fast SystemVerilog sim) · cocotb (Python testbenches) · Yosys + ABC (synthesis) · OpenROAD (P&R end-to-end) · Magic / KLayout (layout) · ngspice + LTspice (analog) · SkyWater PDK 130nm (open silicon)</p>
+            </div>
+        </section>
+
+        <!-- German Language -->
+        <section>
+            <h2>German Language Roadmap</h2>
+            <p>Germany is home to Bosch, Siemens, Infineon, BMW, Mercedes, and countless engineering firms.</p>
+
+            <div class="responsive-table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Level</th>
+                            <th>Hours</th>
+                            <th>What You Can Do</th>
+                            <th>Timeline</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>A1</strong></td>
+                            <td>~80–100</td>
+                            <td>Introduce self, order food, small talk</td>
+                            <td>Sem 3–4 (3 months)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>A2</strong></td>
+                            <td>~200</td>
+                            <td>Everyday conversations, simple emails</td>
+                            <td>Sem 5 (3 months)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>B1</strong></td>
+                            <td>~350</td>
+                            <td>Manage most travel + workplace situations</td>
+                            <td>Sem 6 (4 months)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>B2</strong></td>
+                            <td>~600</td>
+                            <td>Technical discussions, workplace fluency</td>
+                            <td>Sem 7–8 (6 months)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>C1</strong></td>
+                            <td>~900</td>
+                            <td>Read academic papers, work in German teams</td>
+                            <td>Post-grad (6+ months)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3>Weekly Study Plan (A1 → A2)</h3>
+            <div class="alert">
+                <div class="alert-title">Time Commitment: ~7-8 hours/week</div>
+                <ul style="margin-left: 2rem;">
+                    <li><strong>Monday–Friday:</strong> 30 min Duolingo + 20 min Deutsche Welle "Nicos Weg"</li>
+                    <li><strong>Saturday:</strong> 2-hour classroom (Goethe, Max Mueller Bhavan, verified YouTube)</li>
+                    <li><strong>Sunday:</strong> Anki flashcards + 1 short article on deutschperfekt.com</li>
+                    <li><strong>Speaking:</strong> Tandem app or ConversationExchange — 2× 30 min/week</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Circuit Diagrams -->
+        <section>
+            <h2>Circuit Diagrams — Interview-Ready Schematics</h2>
+
+            <h3>Voltage Divider</h3>
+            <div class="circuit-diagram">
+Vin ─────────[R1]─────┬─── Vout<br>
+                      │<br>
+                     [R2]<br>
+                      │<br>
+                     GND<br><br>
+Vout = Vin · R2/(R1+R2)
+            </div>
+            <p><strong>The single most-asked circuit at any Tier-1 core interview.</strong></p>
+
+            <h3>RC Low-Pass Filter</h3>
+            <div class="circuit-diagram">
+Vin ─────────[R]─────┬─── Vout<br>
+                     │<br>
+                    [C]<br>
+                     │<br>
+                    GND<br><br>
+ωc = 1/RC (corner frequency)<br>
+Slope: −20 dB/decade beyond ωc
+            </div>
+
+            <h3>Inverting Op-Amp Amplifier</h3>
+            <div class="circuit-diagram">
+         ┌─────[Rf]────┐<br>
+         │             │<br>
+Vin ─[Rin]─→(−)       │<br>
+         │             ├──┬─── Vout<br>
+         └─(+) OpAmp   │<br>
+              │        │<br>
+             GND      GND<br><br>
+Vout = −(Rf/Rin) · Vin
+            </div>
+
+            <h3>NPN BJT as a Switch</h3>
+            <div class="circuit-diagram">
+        +Vcc<br>
+         │<br>
+        [Rc]<br>
+         │<br>
+        LED<br>
+         │<br>
+        ─┤C (BJT)<br>
+        ─┤B<br>
+        ─┤E<br>
+         │<br>
+        [Rb]<br>
+         │<br>
+Vin ─────┴──── GND<br><br>
+Vin > 0.7 V drives base current, transistor saturates, LED glows.
+            </div>
+
+            <h3>555 Timer in Astable Mode</h3>
+            <div class="circuit-diagram">
+       +Vcc<br>
+         │<br>
+        [Ra]<br>
+         │<br>
+        ┌┴─────[Rb]─────┐<br>
+        │                │<br>
+       [C]              OUT<br>
+        │<br>
+       GND<br><br>
+Frequency ≈ 1.44 / ((Ra+2Rb)·C)<br>
+Duty cycle = (Ra+Rb)/(Ra+2Rb)
+            </div>
+
+            <h3>Arduino UNO — LED + Resistor</h3>
+            <div class="circuit-diagram">
+Arduino D13 ─────[220Ω]─→[LED]→ GND<br><br>
+digitalWrite(13, HIGH) blinks the LED.
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <h3>ECE Master Roadmap</h3>
+        <p>From 1st Year to Tier-1 Placement</p>
+        <p style="margin-top: 1rem; font-size: 0.9rem;">A comprehensive blueprint for ECE undergraduates targeting hardware, embedded, VLSI, or software roles at world-class companies.</p>
+        <p style="margin-top: 1rem; font-size: 0.85rem; opacity: 0.8;">Last Updated: 2024 · Version 1.0</p>
+    </footer>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('nav a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                const href = this.getAttribute('href');
+                if (href.startsWith('#')) {
+                    e.preventDefault();
+                    const target = document.querySelector(href);
+                    if (target) {
+                        target.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
+            });
+        });
+
+        // Add scroll-to-top button functionality
+        window.addEventListener('scroll', function() {
+            const scrollButton = document.querySelector('.scroll-to-top');
+            if (scrollButton) {
+                if (window.scrollY > 300) {
+                    scrollButton.style.display = 'block';
+                } else {
+                    scrollButton.style.display = 'none';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
