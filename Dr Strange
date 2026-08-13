@@ -1,0 +1,740 @@
+import cv2
+import numpy as np
+import mediapipe as mp
+import math
+import random
+import time
+import json
+import argparse
+import threading
+import os
+from collections import deque
+from datetime import datetime
+from enum import Enum, auto
+
+mp_hands = mp.solutions.hands
+mp_drawing = mp.solutions.drawing_utils
+
+try:
+    import pyvirtualcam
+    HAS_VCAM = True
+except ImportError:
+    HAS_VCAM = False
+
+
+# ============================================================
+# CONFIG
+# ============================================================
+DEFAULT_CONFIG = {
+    "base_fx_size": 260,
+    "max_fx_size": 620,
+    "trail_decay": 0.86,
+    "charge_rate": 0.02,
+    "charge_threshold": 2.0,
+    "release_duration": 18,
+    "cooldown_duration": 25,
+    "pinch_threshold_ratio": 0.35,
+    "gesture_history_len": 6,
+    "fist_confirm_frames": 5,
+    "missing_grace_frames": 15,
+    "colors": {
+        "rasengan_primary": [0, 140, 255],
+        "rasengan_secondary": [0, 215, 255],
+        "chidori_primary": [255, 36, 184],
+        "chidori_secondary": [255, 36, 224],
+        "pinch_spark": [255, 255, 255]
+    }
+}
+
+CONFIG_PATH = "config.json"
+
+
+def load_config(path=CONFIG_PATH):
+    if os.path.exists(path):
+        try:
+            with open(path, "r") as f:
+                user_cfg = json.load(f)
+            cfg = DEFAULT_CONFIG.copy()
+            cfg.update(user_cfg)
+            return cfg
+        except Exception:
+            pass
+    return DEFAULT_CONFIG.copy()
+
+
+def save_config(cfg, path=CONFIG_PATH):
+    try:
+        with open(path, "w") as f:
+            json.dump(cfg, f, indent=2)
+    except Exception:
+        pass
+
+
+# ============================================================
+# THREADED VIDEO CAPTURE
+# ============================================================
+class VideoStream:
+    def __init__(self, src=0, width=1280, height=720):
+        self.cap = cv2.VideoCapture(src)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        self.ret, self.frame = self.cap.read()
+        self.lock = threading.Lock()
+        self.stopped = False
+        self.thread = threading.Thread(target=self._update, daemon=True)
+        self.thread.start()
+
+    def _update(self):
+        while not self.stopped:
+            ret, frame = self.cap.read()
+            with self.lock:
+                self.ret, self.frame = ret, frame
+
+    def read(self):
+        with self.lock:
+            return self.ret, (self.frame.copy() if self.frame is not None else None)
+
+    def stop(self):
+        self.stopped = True
+        self.thread.join(timeout=1)
+        self.cap.release()
+
+
+# ============================================================
+# GESTURE RECOGNITION
+# ============================================================
+class Gesture(Enum):
+    NONE = auto()
+    OPEN = auto()
+    FIST = auto()
+    PINCH = auto()
+    PEACE = auto()
+
+
+def _finger_extended(pts, tip, pip, wrist):
+    dt = math.hypot(pts[tip][0] - wrist[0], pts[tip][1] - wrist[1])
+    dp = math.hypot(pts[pip][0] - wrist[0], pts[pip][1] - wrist[1])
+    return dt > dp
+
+
+def recognize_gesture(landmarks, w, h, pinch_ratio_thresh=0.35):
+    pts = [(lm.x * w, lm.y * h) for lm in landmarks]
+    wrist = pts[0]
+    tips = [4, 8, 12, 16, 20]
+    pips = [3, 6, 10, 14, 18]
+
+    extended = []
+    for i in range(1, 5):  # skip thumb for count logic
+        extended.append(_finger_extended(pts, tips[i], pips[i], wrist))
+    count_open = sum(extended)
+
+    hand_size = math.hypot(pts[9][0] - wrist[0], pts[9][1] - wrist[1]) + 1e-6
+    pinch_dist = math.hypot(pts[4][0] - pts[8][0], pts[4][1] - pts[8][1])
+    if pinch_dist / hand_size < pinch_ratio_thresh:
+        return Gesture.PINCH, count_open / 4.0
+
+    if count_open >= 4:
+        return Gesture.OPEN, 1.0
+    if count_open == 0:
+        return Gesture.FIST, 0.0
+    if extended[0] and extended[1] and not extended[2] and not extended[3]:
+        return Gesture.PEACE, 0.5
+
+    return Gesture.NONE, count_open / 4.0
+
+
+# ============================================================
+# GESTURE SMOOTHING (fixes flicker/disappearing)
+# ============================================================
+class GestureSmoother:
+    def __init__(self, history_len=6, confirm_frames=5):
+        self.history = deque(maxlen=history_len)
+        self.confirm_frames = confirm_frames
+        self.confirmed = Gesture.NONE
+        self.fist_streak = 0
+
+    def update(self, raw_gesture):
+        self.history.append(raw_gesture)
+
+        counts = {}
+        for g in self.history:
+            counts[g] = counts.get(g, 0) + 1
+        majority = max(counts, key=counts.get)
+
+        if majority == Gesture.FIST:
+            self.fist_streak += 1
+        else:
+            self.fist_streak = 0
+
+        self.confirmed = majority
+        return self.confirmed
+
+    def fist_confirmed(self):
+        return self.fist_streak >= self.confirm_frames
+
+
+# ============================================================
+# SPELL STATE MACHINE (stable — no accidental dispel)
+# ============================================================
+class SpellState(Enum):
+    IDLE = auto()
+    CHARGING = auto()
+    ACTIVE = auto()
+    RELEASING = auto()
+    COOLDOWN = auto()
+
+
+class HandSpell:
+    def __init__(self, cfg, primary, secondary):
+        self.cfg = cfg
+        self.state = SpellState.IDLE
+        self.scale = 0.8
+        self.timer = 0
+        self.primary = primary
+        self.secondary = secondary
+        self.seed = random.randint(0, 999999)
+        self.rng = random.Random(self.seed)
+        self.burst_r = 0
+        self.missing_frames = 0
+        self.smoother = GestureSmoother(
+            history_len=cfg["gesture_history_len"],
+            confirm_frames=cfg["fist_confirm_frames"]
+        )
+
+    def reseed(self):
+        self.seed = random.randint(0, 999999)
+        self.rng = random.Random(self.seed)
+
+    def notify_hand_seen(self):
+        self.missing_frames = 0
+
+    def notify_hand_missing(self):
+        self.missing_frames += 1
+
+    def update(self, raw_gesture):
+        """raw_gesture is Gesture.NONE if hand wasn't detected this frame at all."""
+        cfg = self.cfg
+        gesture = self.smoother.update(raw_gesture)
+        hand_truly_gone = self.missing_frames > cfg["missing_grace_frames"]
+
+        if self.state == SpellState.IDLE:
+            if gesture == Gesture.OPEN:
+                self.state = SpellState.CHARGING
+                self.scale = 0.8
+                self.reseed()
+
+        elif self.state == SpellState.CHARGING:
+            if self.smoother.fist_confirmed() or hand_truly_gone:
+                self._start_release()
+            else:
+                if gesture == Gesture.OPEN:
+                    self.scale = min(cfg["charge_threshold"], self.scale + cfg["charge_rate"])
+                    if self.scale >= cfg["charge_threshold"]:
+                        self.state = SpellState.ACTIVE
+                # else: hold current scale steady, ignore transient noise
+
+        elif self.state == SpellState.ACTIVE:
+            if self.smoother.fist_confirmed() or hand_truly_gone:
+                self._start_release()
+            elif gesture == Gesture.OPEN:
+                self.scale = min(cfg["max_fx_size"] / cfg["base_fx_size"],
+                                  self.scale + cfg["charge_rate"] * 0.3)
+            # else: hold steady, ignore noise (PINCH/PEACE/NONE momentary)
+
+        elif self.state == SpellState.RELEASING:
+            self.timer -= 1
+            self.burst_r += 22
+            if self.timer <= 0:
+                self.state = SpellState.COOLDOWN
+                self.timer = cfg["cooldown_duration"]
+                self.burst_r = 0
+
+        elif self.state == SpellState.COOLDOWN:
+            self.timer -= 1
+            if self.timer <= 0:
+                self.state = SpellState.IDLE
+                self.scale = 0.8
+
+    def _start_release(self):
+        self.state = SpellState.RELEASING
+        self.timer = self.cfg["release_duration"]
+        self.burst_r = self.scale * self.cfg["base_fx_size"] * 0.3
+
+    def is_visible(self):
+        return self.state in (SpellState.CHARGING, SpellState.ACTIVE, SpellState.RELEASING)
+
+    def charge_ratio(self):
+        return min(1.0, self.scale / self.cfg["charge_threshold"])
+
+
+# ============================================================
+# VISUAL PRIMITIVES
+# ============================================================
+def col(c):
+    return tuple(int(v) for v in c)
+
+
+def screen_blend_full(base, layer):
+    base_f = base.astype(np.float32)
+    layer_f = layer.astype(np.float32)
+    out = 255.0 - (255.0 - base_f) * (255.0 - layer_f) / 255.0
+    return np.clip(out, 0, 255).astype(np.uint8)
+
+
+def make_radial_mask(size, edge_start=0.85, edge_end=1.0):
+    yy, xx = np.mgrid[0:size, 0:size]
+    cx = cy = size / 2.0
+    dist = np.sqrt((xx - cx) ** 2 + (yy - cy) ** 2) / (size / 2.0)
+    mask = 1.0 - np.clip((dist - edge_start) / (edge_end - edge_start), 0, 1)
+    return np.clip(mask, 0, 1)[..., None].astype(np.float32)
+
+
+def paste_add(canvas, fx_img, cx, cy):
+    fh, fw = fx_img.shape[:2]
+    x1, y1 = int(cx - fw / 2), int(cy - fh / 2)
+    x2, y2 = x1 + fw, y1 + fh
+    ch, cw = canvas.shape[:2]
+    bx1, by1 = max(0, x1), max(0, y1)
+    bx2, by2 = min(cw, x2), min(ch, y2)
+    if bx1 >= bx2 or by1 >= by2:
+        return
+    fx1, fy1 = bx1 - x1, by1 - y1
+    fx2, fy2 = fx1 + (bx2 - bx1), fy1 + (by2 - by1)
+    canvas[by1:by2, bx1:bx2] += fx_img[fy1:fy2, fx1:fx2].astype(np.float32)
+
+
+def draw_segmented_ring(img, center, radius, color, thickness, num_seg, gap_ratio, rot_deg):
+    if radius <= 0:
+        return
+    total = 360.0 / num_seg
+    seg = total * (1 - gap_ratio)
+    for i in range(num_seg):
+        s = rot_deg + i * total
+        e = s + seg
+        cv2.ellipse(img, center, (radius, radius), 0, s, e, col(color), thickness, cv2.LINE_AA)
+
+
+def draw_ticks(img, center, radius, color, thickness, num_ticks, tick_len, rot_deg):
+    if radius <= 0:
+        return
+    for i in range(num_ticks):
+        a = math.radians(rot_deg + i * (360.0 / num_ticks))
+        x1 = int(center[0] + radius * math.cos(a))
+        y1 = int(center[1] + radius * math.sin(a))
+        x2 = int(center[0] + (radius - tick_len) * math.cos(a))
+        y2 = int(center[1] + (radius - tick_len) * math.sin(a))
+        cv2.line(img, (x1, y1), (x2, y2), col(color), thickness, cv2.LINE_AA)
+
+
+def draw_polygon(img, center, radius, sides, color, thickness, rot_deg, skip=1):
+    if radius <= 0:
+        return
+    pts = []
+    for i in range(sides):
+        a = math.radians(rot_deg + i * (360.0 / sides))
+        pts.append((int(center[0] + radius * math.cos(a)), int(center[1] + radius * math.sin(a))))
+    n = len(pts)
+    for i in range(n):
+        cv2.line(img, pts[i], pts[(i + skip) % n], col(color), thickness, cv2.LINE_AA)
+
+
+def draw_runes(img, center, radius, color, thickness, num_runes, rot_deg, rng):
+    if radius <= 0:
+        return
+    for i in range(num_runes):
+        a = math.radians(rot_deg + i * (360.0 / num_runes))
+        rx, ry = center[0] + radius * math.cos(a), center[1] + radius * math.sin(a)
+        shape_type = rng.randint(0, 2)
+        size = rng.randint(6, 16)
+        if shape_type == 0:
+            cv2.circle(img, (int(rx), int(ry)), size // 3, col(color), thickness, cv2.LINE_AA)
+        elif shape_type == 1:
+            cv2.line(img, (int(rx - size / 2), int(ry)), (int(rx + size / 2), int(ry)), col(color), thickness, cv2.LINE_AA)
+            cv2.line(img, (int(rx), int(ry - size / 2)), (int(rx), int(ry + size / 2)), col(color), thickness, cv2.LINE_AA)
+        else:
+            cv2.ellipse(img, (int(rx), int(ry)), (size // 2, size // 2), 0,
+                        rng.randint(0, 90), rng.randint(180, 360), col(color), thickness, cv2.LINE_AA)
+
+
+def render_magic_circle(size, t, primary, secondary, rng, intensity=1.0, charge_ratio=1.0):
+    size = max(20, size)
+    img = np.zeros((size, size, 3), dtype=np.uint8)
+    center = (size // 2, size // 2)
+    R = int((size // 2 - 10) * (0.4 + 0.6 * charge_ratio))
+    R = max(1, R)
+
+    rot1, rot2, rot3 = (t * 40) % 360, (-t * 25) % 360, (t * 65) % 360
+
+    draw_segmented_ring(img, center, R, primary, 3, 24, 0.35, rot1)
+    draw_ticks(img, center, max(1, R - 6), primary, 1, 72, 8, rot1)
+    cv2.circle(img, center, R, col(primary), 1, cv2.LINE_AA)
+
+    R2 = max(1, int(R * 0.72))
+    draw_polygon(img, center, R2, 6, secondary, 2, rot2, skip=2)
+    draw_polygon(img, center, R2, 6, secondary, 2, rot2 + 180, skip=2)
+    cv2.circle(img, center, R2, col(secondary), 2, cv2.LINE_AA)
+
+    R3 = max(1, int(R * 0.45))
+    cv2.circle(img, center, R3, col(primary), 2, cv2.LINE_AA)
+    draw_runes(img, center, R3, primary, 1, 16, rot3, rng)
+
+    R4 = max(1, int(R * 0.25))
+    draw_segmented_ring(img, center, R4, secondary, 2, 12, 0.3, -rot3 * 1.4)
+
+    pulse = 0.9 + 0.1 * math.sin(t * 8)
+    cv2.circle(img, center, max(1, int(R * 0.16 * pulse)), col(primary), -1, cv2.LINE_AA)
+    cv2.circle(img, center, max(1, int(R * 0.08 * pulse)), (255, 255, 255), -1, cv2.LINE_AA)
+
+    blur1 = cv2.GaussianBlur(img, (0, 0), sigmaX=4, sigmaY=4)
+    blur2 = cv2.GaussianBlur(img, (0, 0), sigmaX=14, sigmaY=14)
+    img = cv2.addWeighted(img, 1.0, blur1, 0.6, 0)
+    img = cv2.addWeighted(img, 1.0, blur2, 0.45, 0)
+
+    mask = make_radial_mask(size)
+    return (img.astype(np.float32) * mask * intensity).clip(0, 255).astype(np.uint8)
+
+
+class Spark:
+    __slots__ = ['x', 'y', 'vx', 'vy', 'life', 'max_life', 'color']
+
+    def __init__(self, x, y, angle, speed, life, color):
+        self.x, self.y = x, y
+        self.vx, self.vy = math.cos(angle) * speed, math.sin(angle) * speed
+        self.life = life
+        self.max_life = life
+        self.color = color
+
+    def update(self):
+        self.x += self.vx
+        self.y += self.vy
+        self.vx *= 0.96
+        self.vy *= 0.96
+        self.life -= 1
+
+    def alive(self):
+        return self.life > 0
+
+    def draw(self, img):
+        t = max(0.0, self.life / self.max_life)
+        r = max(1, int(3 * t + 1))
+        cv2.circle(img, (int(self.x), int(self.y)), r, tuple(int(v * t) for v in self.color), -1, cv2.LINE_AA)
+
+
+# ============================================================
+# HUD
+# ============================================================
+def draw_hud(frame, fps, states, show_help):
+    h, w = frame.shape[:2]
+    cv2.putText(frame, f"FPS: {fps:.1f}", (w - 160, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2, cv2.LINE_AA)
+
+    if show_help:
+        lines = [
+            "[H] toggle help  [R] record  [S] screenshot",
+            "[+/-] sensitivity  [M] mirror  [C] trails  [ESC] quit",
+            f"L: {states[0]}   R: {states[1]}"
+        ]
+        y = h - 90
+        for line in lines:
+            cv2.putText(frame, line, (20, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                        (200, 200, 200), 1, cv2.LINE_AA)
+            y += 25
+
+
+def draw_combat_log(frame, state, shake=False):
+    presets = {
+        "idle":     ("// MYSTIC ARTS STANDBY", (220, 220, 220), (150, 60, 130)),
+        "chidori":  ("*** SPELL CIRCLE FORMING (L) ***", (255, 36, 200), (255, 36, 180)),
+        "rasengan": ("*** SANCTUM PORTAL FORMING (R) ***", (0, 150, 255), (0, 150, 255)),
+        "release":  ("*** ENERGY UNLEASHED ***", (0, 255, 255), (0, 255, 255)),
+        "clash":    ("!!! DIMENSIONAL RIFT COLLISION !!!", (0, 20, 255), (0, 20, 255)),
+    }
+    msg, text_color, border_color = presets[state]
+    x, y = 30, 30
+    if shake:
+        x += random.randint(-4, 4)
+        y += random.randint(-4, 4)
+    w, h = 640, 90
+    overlay = frame.copy()
+    cv2.rectangle(overlay, (x, y), (x + w, y + h), (15, 0, 5), -1)
+    cv2.addWeighted(overlay, 0.7, frame, 0.3, 0, dst=frame)
+    cv2.rectangle(frame, (x, y), (x + 6, y + h), border_color, -1)
+    cv2.putText(frame, "JEET BANERJEE AR SYSTEM", (x + 20, y + 25),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (200, 200, 200), 1, cv2.LINE_AA)
+    cv2.putText(frame, msg, (x + 20, y + 65), cv2.FONT_HERSHEY_SIMPLEX, 0.65, text_color, 2, cv2.LINE_AA)
+
+
+# ============================================================
+# ARGPARSE
+# ============================================================
+def parse_args():
+    p = argparse.ArgumentParser(description="Jeet AR Sanctum Sorcerer Engine")
+    p.add_argument("--cam", type=int, default=0)
+    p.add_argument("--width", type=int, default=1280)
+    p.add_argument("--height", type=int, default=720)
+    p.add_argument("--det-conf", type=float, default=0.75)
+    p.add_argument("--track-conf", type=float, default=0.75)
+    p.add_argument("--record", type=str, default=None, help="Path to save recording e.g. out.mp4")
+    p.add_argument("--virtualcam", action="store_true", help="Output to virtual camera")
+    p.add_argument("--no-mirror", action="store_true")
+    p.add_argument("--config", type=str, default=CONFIG_PATH)
+    return p.parse_args()
+
+
+# ============================================================
+# MAIN
+# ============================================================
+def main():
+    args = parse_args()
+    cfg = load_config(args.config)
+
+    stream = VideoStream(args.cam, args.width, args.height)
+    time.sleep(0.5)
+
+    hands = mp_hands.Hands(
+        max_num_hands=2, model_complexity=1,
+        min_detection_confidence=args.det_conf,
+        min_tracking_confidence=args.track_conf
+    )
+
+    colors = cfg["colors"]
+    spells = [
+        HandSpell(cfg, colors["chidori_primary"], colors["chidori_secondary"]),
+        HandSpell(cfg, colors["rasengan_primary"], colors["rasengan_secondary"]),
+    ]
+    sparks_lists = [[], []]
+    smoothed_pos = [None, None]
+    trail_buffers = [None, None]
+    mirror = not args.no_mirror
+    trails_enabled = True
+    show_help = True
+
+    pinch_ratio = cfg["pinch_threshold_ratio"]
+
+    recorder = None
+    if args.record:
+        recorder = cv2.VideoWriter(args.record, cv2.VideoWriter_fourcc(*"mp4v"),
+                                    30, (args.width, args.height))
+    recording_toggle = bool(args.record)
+
+    vcam = None
+    if args.virtualcam and HAS_VCAM:
+        vcam = pyvirtualcam.Camera(width=args.width, height=args.height, fps=30)
+        print(f"Virtual camera started: {vcam.device}")
+    elif args.virtualcam:
+        print("[WARN] pyvirtualcam not installed, skipping virtual camera output.")
+
+    t_clock = 0.0
+    prev_time = time.time()
+    fps = 0.0
+    clash_active = False
+    clash_shock_r = 0
+
+    while True:
+        ret, frame = stream.read()
+        if not ret or frame is None:
+            continue
+
+        frame = cv2.resize(frame, (args.width, args.height))
+        h, w = frame.shape[:2]
+        t_clock += 1.0 / 30.0
+
+        if trail_buffers[0] is None:
+            trail_buffers[0] = np.zeros((h, w, 3), dtype=np.float32)
+            trail_buffers[1] = np.zeros((h, w, 3), dtype=np.float32)
+
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        results = hands.process(rgb)
+
+        hand_data = []
+
+        if results.multi_hand_landmarks and results.multi_handedness:
+            for lm_set, handedness in zip(results.multi_hand_landmarks, results.multi_handedness):
+                label = handedness.classification[0].label
+                is_physical_right = (label == 'Left')
+                idx = 1 if is_physical_right else 0
+                gesture, ratio = recognize_gesture(lm_set.landmark, w, h, pinch_ratio)
+
+                draw_color = (200, 200, 200)
+                if gesture == Gesture.OPEN:
+                    draw_color = tuple(colors["rasengan_primary"]) if is_physical_right else tuple(colors["chidori_primary"])
+                elif gesture == Gesture.PINCH:
+                    draw_color = tuple(colors["pinch_spark"])
+
+                mp_drawing.draw_landmarks(
+                    frame, lm_set, mp_hands.HAND_CONNECTIONS,
+                    mp_drawing.DrawingSpec(color=(255, 255, 255), thickness=1, circle_radius=2),
+                    mp_drawing.DrawingSpec(color=draw_color, thickness=2)
+                )
+
+                wrist, knk = lm_set.landmark[0], lm_set.landmark[9]
+                tx, ty = (wrist.x + knk.x) / 2.0, (wrist.y + knk.y) / 2.0
+                hand_data.append({"is_right": is_physical_right, "idx": idx,
+                                   "gesture": gesture, "tx": tx, "ty": ty})
+
+        if mirror:
+            frame = cv2.flip(frame, 1)
+
+        trail_buffers[0] *= cfg["trail_decay"] if trails_enabled else 0.5
+        trail_buffers[1] *= cfg["trail_decay"] if trails_enabled else 0.5
+
+        show_state = ["idle", "idle"]
+        detected_idxs = {hd["idx"] for hd in hand_data}
+
+        for hd in hand_data:
+            idx = hd["idx"]
+            gesture = hd["gesture"]
+            spell = spells[idx]
+            spell.notify_hand_seen()
+            spell.update(gesture)
+
+            cx_raw = (1 - hd["tx"]) * w if mirror else hd["tx"] * w
+            cy_raw = hd["ty"] * h + (-100 if hd["is_right"] else 0)
+
+            if smoothed_pos[idx] is None:
+                smoothed_pos[idx] = [cx_raw, cy_raw]
+            else:
+                smoothed_pos[idx][0] = smoothed_pos[idx][0] * 0.7 + cx_raw * 0.3
+                smoothed_pos[idx][1] = smoothed_pos[idx][1] * 0.7 + cy_raw * 0.3
+            cx, cy = smoothed_pos[idx]
+
+            if spell.is_visible():
+                size = int(min(cfg["max_fx_size"], cfg["base_fx_size"] * spell.scale))
+                intensity = spell.charge_ratio() if spell.state == SpellState.CHARGING else 1.0
+                fx_img = render_magic_circle(size, t_clock, spell.primary, spell.secondary,
+                                              spell.rng, intensity, spell.charge_ratio())
+                paste_add(trail_buffers[idx], fx_img, cx, cy)
+
+                if random.random() < 0.6:
+                    angle = random.uniform(0, 2 * math.pi)
+                    edge_r = size * 0.42
+                    sparks_lists[idx].append(Spark(
+                        cx + edge_r * math.cos(angle), cy + edge_r * math.sin(angle),
+                        angle, random.uniform(1.5, 4.0), random.randint(15, 30), spell.primary
+                    ))
+
+                show_state[idx] = "rasengan" if hd["is_right"] else "chidori"
+
+            if spell.state == SpellState.RELEASING:
+                overlay = np.zeros((h, w, 3), dtype=np.uint8)
+                cv2.circle(overlay, (int(cx), int(cy)), int(spell.burst_r), col(spell.primary), 6, cv2.LINE_AA)
+                cv2.circle(overlay, (int(cx), int(cy)), max(1, int(spell.burst_r * 0.6)), col(spell.secondary), 3, cv2.LINE_AA)
+                trail_buffers[idx] += overlay.astype(np.float32)
+                for _ in range(4):
+                    angle = random.uniform(0, 2 * math.pi)
+                    sparks_lists[idx].append(Spark(cx, cy, angle, random.uniform(4, 8),
+                                                    random.randint(10, 20), spell.primary))
+                show_state[idx] = "release"
+
+            if gesture == Gesture.PINCH:
+                for _ in range(2):
+                    angle = random.uniform(0, 2 * math.pi)
+                    sparks_lists[idx].append(Spark(cx, cy, angle, random.uniform(3, 6),
+                                                    random.randint(10, 18), tuple(colors["pinch_spark"])))
+
+            sparks_lists[idx] = [s for s in sparks_lists[idx] if s.alive()]
+            spark_layer = np.zeros((h, w, 3), dtype=np.uint8)
+            for s in sparks_lists[idx]:
+                s.update()
+                s.draw(spark_layer)
+            trail_buffers[idx] += spark_layer.astype(np.float32)
+
+        # Handle hands not detected this frame — grace period, no instant kill
+        for idx in range(2):
+            if idx not in detected_idxs:
+                spells[idx].notify_hand_missing()
+                spells[idx].update(Gesture.NONE)
+
+                # Keep rendering the spell in its last known position during
+                # release/cooldown even if hand briefly disappears, so bursts
+                # still play out visually instead of freezing mid-frame.
+                if spells[idx].state == SpellState.RELEASING and smoothed_pos[idx] is not None:
+                    cx, cy = smoothed_pos[idx]
+                    spell = spells[idx]
+                    overlay = np.zeros((h, w, 3), dtype=np.uint8)
+                    cv2.circle(overlay, (int(cx), int(cy)), int(spell.burst_r), col(spell.primary), 6, cv2.LINE_AA)
+                    trail_buffers[idx] += overlay.astype(np.float32)
+
+        combined_trail = np.clip(trail_buffers[0] + trail_buffers[1], 0, 255).astype(np.uint8)
+        frame = screen_blend_full(frame, combined_trail)
+
+        both_active = spells[0].state == SpellState.ACTIVE and spells[1].state == SpellState.ACTIVE
+        if both_active:
+            if not clash_active:
+                clash_active = True
+                clash_shock_r = 10
+            clash_shock_r += 18
+            if clash_shock_r < 400:
+                overlay = frame.copy()
+                cv2.circle(overlay, (w // 2, h // 2), clash_shock_r, (255, 255, 255), 4, cv2.LINE_AA)
+                cv2.addWeighted(overlay, 0.5, frame, 0.5, 0, dst=frame)
+            else:
+                clash_shock_r = 10
+        else:
+            clash_active = False
+
+        if both_active:
+            draw_combat_log(frame, "clash", shake=True)
+        elif show_state[0] == "release" or show_state[1] == "release":
+            draw_combat_log(frame, "release")
+        elif show_state[0] == "chidori":
+            draw_combat_log(frame, "chidori")
+        elif show_state[1] == "rasengan":
+            draw_combat_log(frame, "rasengan")
+        else:
+            draw_combat_log(frame, "idle")
+
+        now = time.time()
+        fps = 0.9 * fps + 0.1 * (1.0 / max(1e-6, now - prev_time))
+        prev_time = now
+
+        state_labels = [spells[0].state.name, spells[1].state.name]
+        draw_hud(frame, fps, state_labels, show_help)
+
+        if recording_toggle and recorder:
+            recorder.write(frame)
+            cv2.circle(frame, (w - 30, 60), 8, (0, 0, 255), -1)
+
+        if vcam:
+            vcam_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            vcam.send(vcam_frame)
+            vcam.sleep_until_next_frame()
+
+        cv2.imshow("Jeet AR - Sanctum Sorcerer Engine", frame)
+        key = cv2.waitKey(1) & 0xFF
+
+        if key == 27 or key == ord('q'):
+            break
+        elif key == ord('h'):
+            show_help = not show_help
+        elif key == ord('r'):
+            recording_toggle = not recording_toggle
+            if recording_toggle and not recorder:
+                fname = f"recording_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
+                recorder = cv2.VideoWriter(fname, cv2.VideoWriter_fourcc(*"mp4v"), 30, (w, h))
+                print(f"Recording to {fname}")
+        elif key == ord('s'):
+            fname = f"screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+            cv2.imwrite(fname, frame)
+            print(f"Saved {fname}")
+        elif key == ord('m'):
+            mirror = not mirror
+        elif key == ord('c'):
+            trails_enabled = not trails_enabled
+        elif key == ord('+'):
+            pinch_ratio = min(0.6, pinch_ratio + 0.02)
+        elif key == ord('-'):
+            pinch_ratio = max(0.1, pinch_ratio - 0.02)
+
+    save_config(cfg, args.config)
+    stream.stop()
+    if recorder:
+        recorder.release()
+    if vcam:
+        vcam.close()
+    cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    main()
+
