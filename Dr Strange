@@ -1,3 +1,26 @@
+
+
+"""
+Jeet AR - Sanctum Sorcerer Engine (Advanced Edition - Stable Build)
+=====================================================================
+Usage:
+    python sanctum_engine.py [options]
+
+Hotkeys (while running):
+    ESC / q     - quit
+    h           - toggle HUD/help overlay
+    r           - toggle recording (saves timestamped .mp4)
+    s           - save screenshot (.png)
+    +  / -      - increase / decrease pinch sensitivity
+    m           - toggle mirror mode
+    c           - toggle magic-circle trail persistence
+
+CLI examples:
+    python sanctum_engine.py --cam 0 --width 1280 --height 720
+    python sanctum_engine.py --record out.mp4
+    python sanctum_engine.py --virtualcam
+"""
+
 import cv2
 import numpy as np
 import mediapipe as mp
@@ -737,4 +760,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
